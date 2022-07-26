@@ -21,11 +21,70 @@
 #define __SPI_FLASH_CB_H
 
 
+/**
+ * @defgroup SFCB_CFG driver configuration
+ *
+ * sinu diag character interface register and offset defintion
+ *
+ * @{
+ */
+#ifndef SFCB_SPI_BUF
+	#define SFCB_SPI_BUF	266		/**<  SPI buffer between logical, and HW layer; Page Size + some bytes for instruction  */
+#endif
+/** @} */
+
+
+/**
+ * @defgroup SFCB_CMD
+ *
+ * States for Worker
+ *
+ * @{
+ */
+#define SFCB_CMD_IDLE	(0x00)      /**<  Nothing to do */
+#define SFCB_CMD_MKCB	(0x01)      /**<  Make Circular Buffers */
+/** @} */
+
+
+/**
+ * @defgroup SFCB_STG
+ *
+ * Execution Stages
+ *
+ * @{
+ */
+#define SFCB_STG_00	(0x00)      /**<  Stage 0 */
+#define SFCB_STG_01	(0x01)      /**<  Stage 1 */
+/** @} */
+
+
+/**
+ * @defgroup SFCB_ERO
+ *
+ * Execution Stages
+ *
+ * @{
+ */
+#define SFCB_ERO_NO	(0x00)      /**<  No Error */
+/** @} */
+
+
+
+
+
 /* C++ compatibility */
 #ifdef __cplusplus
 extern "C"
 {
 #endif // __cplusplus
+
+
+typedef struct spi_flash_cb_elem_head
+{
+    uint32_t	uint32MagicNum;	/**< Magic Number for marking valid block */
+    uint32_t	uint32IdNum;	/**< Series Number of ID */
+} __attribute__((packed)) spi_flash_cb_elem_head;
+
 
 
 typedef struct spi_flash_cb_elem
@@ -36,8 +95,9 @@ typedef struct spi_flash_cb_elem
     uint32_t	uint32HighSeriesNum;		/**< Highest Number in series number field */
     uint32_t	uint32StartSector;			/**< Start Sector of the Circular Buffer */
     uint32_t	uint32StopSector;			/**< Stop Sector. At least two sectors are required, otherwise will sector erase delete complete buffer */
-    uint32_t	uint32StartPageNewEntry;	/**< Start Page number of next entry */
+    uint32_t	uint32StartPageNextEntry;	/**< Start Page number of next entry */
     uint16_t	uint16NumPagesPerElem;		/**< Number of pages per element */
+    uint16_t	uint16NumEntries;			/**< Number of entries in circular buffer */
 } __attribute__((packed)) spi_flash_cb_elem;
 
 
@@ -54,9 +114,19 @@ typedef struct spi_flash_cb_elem
  */
 typedef struct spi_flash_cb
 {
-    uint8_t		uint8FlashType;	/**< pointer to flashtype. see #t_spi_flash_cb_type_descr */
-    uint8_t		uint8NumCbs;	/**< number of circular buffers */
-    void*		ptrCbs;			/**< List with flash circular buffers */
+    uint8_t		uint8FlashType;			/**< pointer to flashtype. see #t_spi_flash_cb_type_descr */
+    uint8_t		uint8NumCbs;			/**< number of circular buffers */
+    void*		ptrCbs;					/**< List with flash circular buffers */
+    void        (*fptr_isr)(void); 		/**< function pointer to SPI ISR */
+    uint8_t		uint8Spi[SFCB_SPI_BUF];	/**< transceive buffer between SPI/CB layer */
+    uint16_t	uint8SpiLen;			/**< used buffer length */
+    uint8_t		uint8Busy : 1;			/**< Performing splitted interaction of circular buffers */
+    uint8_t		uint8Cmd;				/**< Command to be executed */
+    uint8_t		uint8IterCb;			/**< Iterator for splitted interaction, iterator over Circular buffers */
+    uint16_t	uint16IterElem;			/**< Iterator for splitted interaction, iteartor over elements in circular buffer */
+    uint8_t		uint8Stg;				/**< Execution stage, from last interaction */
+    uint8_t		uint8Error;				/**< Error code if somehting strange happend */
+    
 } spi_flash_cb;
 
 
@@ -76,7 +146,7 @@ typedef struct spi_flash_cb
  *  @since          2022-07-25
  *  @author         Andreas Kaeberlein
  */
-int spi_flash_cb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8_t numCbs);
+int spi_flash_cb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8_t numCbs, void (*isr_f));
 
 
 /**
@@ -88,13 +158,14 @@ int spi_flash_cb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8
  *  @param[in]      magicNum            Magic Number for marking enties valid, should differ between different Circular buffer entries
  *  @param[in]      elemSizeByte        Size of one element in the circular buffer in byte
  *  @param[in]      numElems            minimal number of elements in the circular buffer, through need of sector erase and not deleting all data can be this number higher then requested
+ *  @param[in,out]  *cbID            	Circular buffer number
  *  @return         int                 state
  *  @retval         0                   OKAY
  *  @retval         1                   No free circular buffer slots, allocate more static memory
  *  @since          2022-07-25
  *  @author         Andreas Kaeberlein
  */
-int spi_flash_cb_add (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_t numElems);
+int spi_flash_cb_add (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_t numElems, uint8_t *cbID);
 
 
 
