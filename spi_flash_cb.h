@@ -43,6 +43,7 @@
  */
 #define SFCB_CMD_IDLE	(0x00)      /**<  Nothing to do */
 #define SFCB_CMD_MKCB	(0x01)      /**<  Make Circular Buffers */
+#define SFCB_CMD_ADD	(0x02)      /**<  Add Element into Circular Buffer */
 /** @} */
 
 
@@ -55,6 +56,7 @@
  */
 #define SFCB_STG_00	(0x00)      /**<  Stage 0 */
 #define SFCB_STG_01	(0x01)      /**<  Stage 1 */
+#define SFCB_STG_02	(0x02)      /**<  Stage 2 */
 /** @} */
 
 
@@ -89,13 +91,15 @@ typedef struct spi_flash_cb_elem_head
 
 typedef struct spi_flash_cb_elem
 {
-    uint8_t		uint8Used : 1;				/**< Entry is used */
-    uint8_t		uint8Init : 1;				/**< Data structure initialized */
+    uint8_t		uint8Used;					/**< Entry is used */
+    uint8_t		uint8Init;					/**< Data structure initialized */
     uint32_t	uint32MagicNum;				/**< Magic Number for marking valid block */
-    uint32_t	uint32HighSeriesNum;		/**< Highest Number in series number field */
+    uint32_t	uint32IdNumMax;				/**< Contents highest elment number in logical circular buffer. Circular buffer elements are ascending numbered starting at zero */
+    uint32_t	uint32IdNumMin;				/**< lowest element number in circular buffer */
     uint32_t	uint32StartSector;			/**< Start Sector of the Circular Buffer */
     uint32_t	uint32StopSector;			/**< Stop Sector. At least two sectors are required, otherwise will sector erase delete complete buffer */
-    uint32_t	uint32StartPageNextEntry;	/**< Start Page number of next entry */
+    uint32_t	uint32StartPageWrite;		/**< Start Page number of next entry */
+    uint32_t	uint32StartPageErase;		/**< Start Page to erase, results in deleting corresponding sector */
     uint16_t	uint16NumPagesPerElem;		/**< Number of pages per element */
     uint16_t	uint16NumEntries;			/**< Number of entries in circular buffer */
 } __attribute__((packed)) spi_flash_cb_elem;
@@ -117,13 +121,13 @@ typedef struct spi_flash_cb
     uint8_t		uint8FlashType;			/**< pointer to flashtype. see #t_spi_flash_cb_type_descr */
     uint8_t		uint8NumCbs;			/**< number of circular buffers */
     void*		ptrCbs;					/**< List with flash circular buffers */
-    void        (*fptr_isr)(void); 		/**< function pointer to SPI ISR */
     uint8_t		uint8Spi[SFCB_SPI_BUF];	/**< transceive buffer between SPI/CB layer */
     uint16_t	uint8SpiLen;			/**< used buffer length */
-    uint8_t		uint8Busy : 1;			/**< Performing splitted interaction of circular buffers */
+    uint8_t		uint8Busy;				/**< Performing splitted interaction of circular buffers */
     uint8_t		uint8Cmd;				/**< Command to be executed */
     uint8_t		uint8IterCb;			/**< Iterator for splitted interaction, iterator over Circular buffers */
     uint16_t	uint16IterElem;			/**< Iterator for splitted interaction, iteartor over elements in circular buffer */
+    uint32_t	uint32IterPage;			/**< captures last header page of spi transmission */
     uint8_t		uint8Stg;				/**< Execution stage, from last interaction */
     uint8_t		uint8Error;				/**< Error code if somehting strange happend */
     
@@ -146,7 +150,7 @@ typedef struct spi_flash_cb
  *  @since          2022-07-25
  *  @author         Andreas Kaeberlein
  */
-int spi_flash_cb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8_t numCbs, void (*isr_f));
+int spi_flash_cb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8_t numCbs);
 
 
 /**
