@@ -127,7 +127,7 @@ typedef struct spi_flash_cb
     uint8_t		uint8Cmd;				/**< Command to be executed */
     uint8_t		uint8IterCb;			/**< Iterator for splitted interaction, iterator over Circular buffers */
     uint16_t	uint16IterElem;			/**< Iterator for splitted interaction, iteartor over elements in circular buffer */
-    uint32_t	uint32IterPage;			/**< Page Iterator, f. e. captures last header page, next page write */
+    uint32_t	uint32IterPage;			/**< Page Iterator. Contents full byte address but in multiple of pages. F. e. captures last header page, next page write */
     uint8_t		uint8Stg;				/**< Execution stage, from last interaction */
     uint8_t		uint8Error;				/**< Error code if somehting strange happend */
     void*		ptrCbElemPl;			/**< Pointer to Payload data of CB Element */
