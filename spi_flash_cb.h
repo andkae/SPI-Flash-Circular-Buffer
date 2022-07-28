@@ -99,7 +99,7 @@ typedef struct spi_flash_cb_elem
     uint32_t	uint32StartSector;			/**< Start Sector of the Circular Buffer */
     uint32_t	uint32StopSector;			/**< Stop Sector. At least two sectors are required, otherwise will sector erase delete complete buffer */
     uint32_t	uint32StartPageWrite;		/**< Start Page number of next entry */
-    uint32_t	uint32StartPageErase;		/**< Start Page to erase, results in deleting corresponding sector */
+    uint32_t	uint32StartPageIdMin;		/**< Start page of Circular buffer entry with lowest number, used for sector erase */
     uint16_t	uint16NumPagesPerElem;		/**< Number of pages per element */
     uint16_t	uint16NumEntries;			/**< Number of entries in circular buffer */
 } __attribute__((packed)) spi_flash_cb_elem;
@@ -130,6 +130,8 @@ typedef struct spi_flash_cb
     uint32_t	uint32IterPage;			/**< captures last header page of spi transmission */
     uint8_t		uint8Stg;				/**< Execution stage, from last interaction */
     uint8_t		uint8Error;				/**< Error code if somehting strange happend */
+    void*		ptrCbElemPl;			/**< Pointer to Payload data of CB Element */
+    uint16_t	uint16CbElemPlSize;		/**< Size of payload data in bytes */
     
 } spi_flash_cb;
 
@@ -153,6 +155,7 @@ typedef struct spi_flash_cb
 int spi_flash_cb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8_t numCbs);
 
 
+
 /**
  *  @brief add
  *
@@ -170,6 +173,41 @@ int spi_flash_cb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8
  *  @author         Andreas Kaeberlein
  */
 int spi_flash_cb_add (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_t numElems, uint8_t *cbID);
+
+
+
+/**
+ *  @brief worker
+ *
+ *  Services Circular buffer layer, request/processes SPI packets.
+ *  Executes request from #sfcb_mkcb, 
+ *
+ *  @param[in,out]  self                handle
+ *  @return         void                state
+ *  @since          2022-07-27
+ *  @author         Andreas Kaeberlein
+ */
+void sfcb_worker (spi_flash_cb *self);
+
+
+
+/**
+ *  @brief build-up
+ *
+ *  Reads from Flash and builds-up queues with circular buffer structure
+ *
+ *  @param[in,out]  self                handle
+ *  @return         int                	state
+ *  @retval         0                   Request accepted
+ *  @retval         1                   Not Free for new Requests, wait
+ *  @retval         2                   no active queue, add via #spi_flash_cb_add
+ *  @since          2022-07-27
+ *  @author         Andreas Kaeberlein
+ */
+int sfcb_mkcb (spi_flash_cb *self);
+
+
+
 
 
 
