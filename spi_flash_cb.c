@@ -70,6 +70,8 @@ int spi_flash_cb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8
     self->uint8NumCbs = numCbs;
     self->uint8SpiLen = 0;
     self->uint8Busy = 0;
+	self->uint8Cmd = SFCB_CMD_IDLE;	// free for request
+	self->uint8Stg = SFCB_STG_00;
     self->ptrCbs = cbMem;
     /* init list */
     for ( uint8_t i=0; i<self->uint8NumCbs; i++ ) {
@@ -140,8 +142,7 @@ void sfcb_worker (spi_flash_cb *self)
 		 * 
 		 */
 		case SFCB_CMD_IDLE:
-			self->uint8SpiLen = 0;
-			return;		// leave function
+			return;
 		/* 
 		 * 
 		 * Allocate Next Free Element for Circular Buffers 
@@ -228,7 +229,7 @@ void sfcb_worker (spi_flash_cb *self)
 									self->uint8Cmd = SFCB_CMD_IDLE;
 									self->uint8Stg = SFCB_STG_00;
 									self->uint8Busy = 0;
-									break;
+									return;
 								/* active queue found */
 								} else {
 									if ( 0 == ((spi_flash_cb_elem*) self->ptrCbs)[i].uint8Init ) {
@@ -243,6 +244,7 @@ void sfcb_worker (spi_flash_cb *self)
 								self->uint8Cmd = SFCB_CMD_IDLE;
 								self->uint8Stg = SFCB_STG_00;
 								self->uint8Busy = 0;
+								return;
 							}
 						/* Go on with sector erase */
 						} else {
@@ -269,7 +271,21 @@ void sfcb_worker (spi_flash_cb *self)
 		 */
 		case SFCB_CMD_ADD:
 			switch (self->uint8Stg) {
-				
+				/* check for WIP */
+				case SFCB_STG_00:
+					if ( (0 == self->uint8SpiLen) || (0 != (self->uint8Spi[1] & SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashMngWipMsk)) ) {
+						/* First Request or WIP */
+						self->uint8Spi[0] = SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashIstRdStateReg;
+						self->uint8Spi[1] = 0;
+						self->uint8SpiLen = 2;
+						return;
+					}
+					self->uint8SpiLen = 0;			// no data available
+					self->uint8Stg = SFCB_STG_01;	// Go one with search for Free Segment
+					__attribute__ ((fallthrough));	// Go one with next
+				/* Find Page for next Circulat buffer element */
+				case SFCB_STG_01:
+					break;
 				
 				
 				
@@ -340,20 +356,18 @@ int sfcb_add (spi_flash_cb *self, uint8_t cbID, void *data, uint16_t len)
 		return 2;	// Circular Buffer is not prepared for adding new element, run #sfcb_worker
 	}
 	/* check for match into circular buffer size */
-	if ( len > (((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint16NumPagesPerElem * SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoPageSizeByte) ) {
-		return 4;	// Circular Buffer is not prepared for adding new element, run #sfcb_worker
+	if ( len > (((spi_flash_cb_elem*) self->ptrCbs)[cbID].uint16NumPagesPerElem * SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoPageSizeByte) ) {
+		return 4;	// data segement is larger then reserved circular buffer space
 	}
 	/* store information for insertion */
 	self->uint8IterCb = cbID;	// used as pointer to queue
 	((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint8Init = 0;	// mark as dirty, for next write run #sfcb_mkcb
-	
-	
-	
+	self->ptrCbElemPl = data;
+	self->uint16CbElemPlSize = len;
+	self->uint16IterElem = 0;	// used as ptrCbElemPl written pointer
 	/* Setup new Job */
 	self->uint8Busy = 1;
 	self->uint8Cmd = SFCB_CMD_ADD;
-	self->uint8IterCb = 0;
-	self->uint16IterElem = 0;
 	self->uint8Stg = SFCB_STG_00;
 	self->uint8Error = SFCB_ERO_NO;
 	/* fine */
