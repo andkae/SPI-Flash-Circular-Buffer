@@ -122,12 +122,12 @@ typedef struct spi_flash_cb
     uint8_t		uint8NumCbs;			/**< number of circular buffers */
     void*		ptrCbs;					/**< List with flash circular buffers */
     uint8_t		uint8Spi[SFCB_SPI_BUF];	/**< transceive buffer between SPI/CB layer */
-    uint16_t	uint8SpiLen;			/**< used buffer length */
+    uint16_t	uint16SpiLen;			/**< used buffer length */
     uint8_t		uint8Busy;				/**< Performing splitted interaction of circular buffers */
     uint8_t		uint8Cmd;				/**< Command to be executed */
     uint8_t		uint8IterCb;			/**< Iterator for splitted interaction, iterator over Circular buffers */
     uint16_t	uint16IterElem;			/**< Iterator for splitted interaction, iteartor over elements in circular buffer */
-    uint32_t	uint32IterPage;			/**< captures last header page of spi transmission */
+    uint32_t	uint32IterPage;			/**< Page Iterator, f. e. captures last header page, next page write */
     uint8_t		uint8Stg;				/**< Execution stage, from last interaction */
     uint8_t		uint8Error;				/**< Error code if somehting strange happend */
     void*		ptrCbElemPl;			/**< Pointer to Payload data of CB Element */
@@ -208,7 +208,24 @@ int sfcb_mkcb (spi_flash_cb *self);
 
 
 
-
+/**
+ *  @brief add element
+ *
+ *  adds element to circular buffer structure
+ *
+ *  @param[in,out]  self                handle
+ *  @param[in]      cbID            	Logical Number of Cicular Buffer queue
+ *  @param[in]  	*data            	Pointer to data array which should add
+ *  @param[in]  	len           		size of *data in bytes
+ *  @return         int                	state
+ *  @retval         0                   Request accepted.
+ *  @retval         1                   Worker is busy, wait for processing last job.
+ *  @retval         2                   Circular Buffer is not prepared for adding new element, run #sfcb_worker.
+ * 	@retval         4                   Data segement is larger then reserved circular buffer space.
+ *  @since          2022-07-28
+ *  @author         Andreas Kaeberlein
+ */
+int sfcb_add (spi_flash_cb *self, uint8_t cbID, void *data, uint16_t len);
 
 
 
