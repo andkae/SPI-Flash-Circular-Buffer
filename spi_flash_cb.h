@@ -44,6 +44,7 @@
 #define SFCB_CMD_IDLE	(0x00)      /**<  Nothing to do */
 #define SFCB_CMD_MKCB	(0x01)      /**<  Make Circular Buffers */
 #define SFCB_CMD_ADD	(0x02)      /**<  Add Element into Circular Buffer */
+#define SFCB_CMD_GET	(0x03)      /**<  Get Data from Element of Circular buffer, there is no pop from the stack after get */
 /** @} */
 
 
@@ -189,6 +190,22 @@ int spi_flash_cb_add (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeBy
  *  @author         Andreas Kaeberlein
  */
 void sfcb_worker (spi_flash_cb *self);
+
+
+
+/**
+ *  @brief busy
+ *
+ *  checks if #sfcb_worker is free for new requests
+ *
+ *  @param[in,out]  self                handle
+ *  @return         int                	state
+ *  @retval         0                   idle
+ *  @retval         1                   busy
+ *  @since          2022-07-29
+ *  @author         Andreas Kaeberlein
+ */
+int sfcb_busy (spi_flash_cb *self);
 
 
 

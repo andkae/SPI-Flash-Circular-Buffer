@@ -170,7 +170,7 @@ void sfcb_worker (spi_flash_cb *self)
 				case SFCB_STG_01:
 					/* check last response */
 					if ( 0 != self->uint16SpiLen ) {
-						/* For circular buffer used flash area? */
+						/* Flash Area is used by circular buffer, check magic number*/
 						if ( ((spi_flash_cb_elem_head*) (((void*)self->uint8Spi)+4))->uint32MagicNum == ((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint32MagicNum ) {
 							/* count available elements */
 							(((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint16NumEntries)++;
@@ -344,7 +344,11 @@ void sfcb_worker (spi_flash_cb *self)
 				default:
 					break;
 			}
-		
+		/* 
+		 * 
+		 * Get Element from circular buffer
+		 * 
+		 */
 		
 		
 		
@@ -356,6 +360,21 @@ void sfcb_worker (spi_flash_cb *self)
 			break;
 	}
 }
+
+
+
+/**
+ *  sfcb_busy
+ *    checks if #sfcb_worker is free for new requests
+ */
+int sfcb_busy (spi_flash_cb *self)
+{
+	if ( 0 != self->uint8Busy ) {
+		return 1;	// busy
+	}
+	return 0;	
+}
+
 
 
 /**
@@ -427,3 +446,24 @@ int sfcb_add (spi_flash_cb *self, uint8_t cbID, void *data, uint16_t len)
 
 
 
+/**
+ *  sfcb_add
+ *    inserts element into circular buffer
+ */
+int sfcb_get (spi_flash_cb *self, uint8_t cbID, void *data, uint16_t len, uint16_t lenMax)
+{
+	/* no jobs pending */
+	if ( 0 != self->uint8Busy ) {
+		return 1;	// Worker is busy, wait for processing last job
+	}
+	/* check if CB is init for request */
+	if ( (0 == ((spi_flash_cb_elem*) self->ptrCbs)[cbID].uint8Used) || (0 == ((spi_flash_cb_elem*) self->ptrCbs)[cbID].uint8Init) ) {
+		return 2;	// Circular Buffer is not prepared for adding new element, run #sfcb_worker
+	}
+	/* prepare job */
+
+
+
+	/* fine */
+	return 0;
+}
