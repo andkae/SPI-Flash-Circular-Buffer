@@ -101,6 +101,7 @@ typedef struct spi_flash_cb_elem
     uint32_t	uint32StartPageWrite;		/**< Start Page number of next entry */
     uint32_t	uint32StartPageIdMin;		/**< Start page of Circular buffer entry with lowest number, used for sector erase */
     uint16_t	uint16NumPagesPerElem;		/**< Number of pages per element */
+    uint16_t	uint16NumEntriesMax;		/**< Maximal Number of entries in circular buffer caused by partition table */
     uint16_t	uint16NumEntries;			/**< Number of entries in circular buffer */
 } __attribute__((packed)) spi_flash_cb_elem;
 

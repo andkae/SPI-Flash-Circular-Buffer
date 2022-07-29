@@ -115,9 +115,10 @@ int spi_flash_cb_add (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeBy
 	cb_elem[uint8FreeCbEntry].uint32MagicNum = magicNum;	// used magic number for the circular buffer
 	cb_elem[uint8FreeCbEntry].uint16NumPagesPerElem = spi_flash_cb_ceildivide(elemSizeByte+uint8NumHeadBytes, SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoPageSizeByte);	// calculate in multiple of pages
 	cb_elem[uint8FreeCbEntry].uint32StartSector = uint32StartSector;
-	uint32NumSectors = spi_flash_cb_max(2, spi_flash_cb_ceildivide(numElems*cb_elem[uint8FreeCbEntry].uint16NumPagesPerElem, SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashTopoPagesPerSecor));
+	uint32NumSectors = spi_flash_cb_max(2, spi_flash_cb_ceildivide(numElems*cb_elem[uint8FreeCbEntry].uint16NumPagesPerElem, SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashTopoPagesPerSector));
 	cb_elem[uint8FreeCbEntry].uint32StopSector = cb_elem[uint8FreeCbEntry].uint32StartSector+uint32NumSectors-1;
-	cb_elem[uint8FreeCbEntry].uint16NumEntries = (uint16_t) (uint32NumSectors*SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashTopoPagesPerSecor);
+	cb_elem[uint8FreeCbEntry].uint16NumEntriesMax = (uint16_t) (uint32NumSectors*SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashTopoPagesPerSector);
+	cb_elem[uint8FreeCbEntry].uint16NumEntries = 0;
 	*cbID = uint8FreeCbEntry;
 	/* succesfull */
 	return 0;
@@ -171,12 +172,14 @@ void sfcb_worker (spi_flash_cb *self)
 					if ( 0 != self->uint16SpiLen ) {
 						/* For circular buffer used flash area? */
 						if ( ((spi_flash_cb_elem_head*) (((void*)self->uint8Spi)+4))->uint32MagicNum == ((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint32MagicNum ) {
+							/* count available elements */
+							(((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint16NumEntries)++;
 							/* get highest number of numbered circular buffer elements, needed for next entry */
 							if ( ((spi_flash_cb_elem_head*) (((void*)self->uint8Spi)+4))->uint32IdNum > ((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint32IdNumMax ) {
 								/* save new highest number in circular buffer */
 								((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint32IdNumMax = ((spi_flash_cb_elem_head*) (((void*)self->uint8Spi)+4))->uint32IdNum;
 							} 
-							/* get lowest number of circular buffer, needed for erase sector */
+							/* get lowest number of circular buffer, needed for erase sector, and start get function */
 							if ( ((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint32IdNumMin > ((spi_flash_cb_elem_head*) (((void*)self->uint8Spi)+4))->uint32IdNum ) {
 								((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint32IdNumMin = ((spi_flash_cb_elem_head*) (((void*)self->uint8Spi)+4))->uint32IdNum;
 								((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint32StartPageIdMin = self->uint32IterPage;
@@ -215,7 +218,7 @@ void sfcb_worker (spi_flash_cb *self)
 					self->uint8Spi[2] = ((self->uint32IterPage >> 8) & 0xFF);
 					self->uint8Spi[3] = (self->uint32IterPage & 0xFF);			// Low Address
 					/* prepare iterator for next */
-					if ( self->uint16IterElem < ((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint16NumEntries ) {
+					if ( self->uint16IterElem < ((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint16NumEntriesMax ) {
 						/* next element in current queue */
 						(self->uint16IterElem)++;
 					} else {
