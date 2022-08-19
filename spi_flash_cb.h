@@ -58,6 +58,7 @@
 #define SFCB_STG_00	(0x00)      /**<  Stage 0 */
 #define SFCB_STG_01	(0x01)      /**<  Stage 1 */
 #define SFCB_STG_02	(0x02)      /**<  Stage 2 */
+#define SFCB_STG_03	(0x03)      /**<  Stage 3 */
 /** @} */
 
 

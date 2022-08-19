@@ -136,6 +136,7 @@ void sfcb_worker (spi_flash_cb *self)
 	uint8_t					uint8Good;				// check was good
 	uint16_t				uint16PagesBytesAvail;	// number of used page bytes
 	uint16_t				uint16CpyLen;			// number of Bytes to copy
+	uint32_t				uint32Temp;				// temporaray 32bit variable
 	spi_flash_cb_elem_head	head;					// circular buffer element header
 	
 	/* select part of FSM */
@@ -170,7 +171,9 @@ void sfcb_worker (spi_flash_cb *self)
 				case SFCB_STG_01:
 					/* check last response */
 					if ( 0 != self->uint16SpiLen ) {
-						/* Flash Area is used by circular buffer, check magic number*/
+						/* Flash Area is used by circular buffer, check magic number 
+						 *   +4: Read instruction + 32bit address
+						 */
 						if ( ((spi_flash_cb_elem_head*) (((void*)self->uint8Spi)+4))->uint32MagicNum == ((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint32MagicNum ) {
 							/* count available elements */
 							(((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint16NumEntries)++;
@@ -229,7 +232,7 @@ void sfcb_worker (spi_flash_cb *self)
 							(self->uint8IterCb)++;		// process next queue
 							/* look ahead if service of some queue can skipped */
 							for ( uint8_t i=self->uint8IterCb; i<self->uint8NumCbs; i++ ) {
-								/* all active queues processed */
+								/* all active circular buffer queues processed? */
 								if ( 0 == ((spi_flash_cb_elem*) self->ptrCbs)[i].uint8Used ) {
 									self->uint16SpiLen = 0;
 									self->uint8Cmd = SFCB_CMD_IDLE;
@@ -261,11 +264,28 @@ void sfcb_worker (spi_flash_cb *self)
 					}
 					return;	// DONE or SPI transfer is required
 					break;
-				/* Prepare Sector ERASE */	
+				/* Assemble Command for Sector ERASE */	
 				case SFCB_STG_02:
-					neorv32_uart0_printf("ERASE");
-					self->uint16SpiLen = 0;	// TODO
+					uint32Temp = ((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint32IdNumMin;
+					self->uint8Spi[0] = SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashIstEraseSector;
+					self->uint8Spi[1] = ((uint32Temp >> 16) & 0xFF);	// High Address
+					self->uint8Spi[2] = ((uint32Temp >> 8) & 0xFF);
+					self->uint8Spi[3] = (uint32Temp & 0xFF);			// Low Address
+					self->uint16SpiLen = 4;
+					self->uint8Stg = SFCB_STG_03;
+					return;	// DONE or SPI transfer is required
 					break;
+				/* Wait for Sector Erase */	
+				case SFCB_STG_03:
+					/* Start at zero Element with search for free page */
+					self->uint16IterElem = 0;
+					/* Assemble command for WIP */
+					self->uint8Spi[0] = SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashIstRdStateReg;
+					self->uint8Spi[1] = 0;
+					self->uint16SpiLen = 2;
+					self->uint8Stg = SFCB_STG_00;	// wait for erase, and search for free page for next element
+					return;	// DONE or SPI transfer is required
+					break;				
 				/* something strange happend */
 				default:
 					break;
