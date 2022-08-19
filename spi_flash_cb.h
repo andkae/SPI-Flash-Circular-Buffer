@@ -155,14 +155,14 @@ typedef struct spi_flash_cb
  *  @since          2022-07-25
  *  @author         Andreas Kaeberlein
  */
-int spi_flash_cb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8_t numCbs);
+int sfcb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8_t numCbs);
 
 
 
 /**
- *  @brief add
+ *  @brief new_cb
  *
- *  add entry to flash circular buffer parition table
+ *  creates new circular buffer entry in flash parition table
  *
  *  @param[in,out]  self                handle
  *  @param[in]      magicNum            Magic Number for marking enties valid, should differ between different Circular buffer entries
@@ -175,7 +175,7 @@ int spi_flash_cb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8
  *  @since          2022-07-25
  *  @author         Andreas Kaeberlein
  */
-int spi_flash_cb_add (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_t numElems, uint8_t *cbID);
+int sfcb_new_cb (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_t numElems, uint8_t *cbID);
 
 
 

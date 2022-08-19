@@ -56,10 +56,10 @@ uint32_t spi_flash_cb_max(uint16_t val1, uint16_t val2)
 
 
 /**
- *  spi_flash_cb_init
+ *  sfcb_init
  *    initializes handle
  */
-int spi_flash_cb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8_t numCbs)
+int sfcb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8_t numCbs)
 {
     /* check if provided flash type is valid */
     if ( flashType > ((sizeof(SPI_FLASH_CB_TYPES)/sizeof(SPI_FLASH_CB_TYPES[0]))-1) ) {
@@ -84,10 +84,10 @@ int spi_flash_cb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8
 
 
 /**
- *  spi_flash_cb_add
- *    add circular buffer entry
+ *  sfcb_new_cb 
+ *    creates new circular buffer entry
  */
-int spi_flash_cb_add (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_t numElems, uint8_t *cbID)
+int sfcb_new_cb (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_t numElems, uint8_t *cbID)
 {	
 	/** help variables **/
 	const uint8_t		uint8NumHeadBytes = 2*sizeof(((spi_flash_cb_elem *)0)->uint32MagicNum) + sizeof(((spi_flash_cb_elem *)0)->uint32IdNumMax);
