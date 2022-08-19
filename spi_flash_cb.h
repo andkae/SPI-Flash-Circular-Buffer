@@ -211,6 +211,20 @@ int sfcb_busy (spi_flash_cb *self);
 
 
 /**
+ *  @brief Spi Length
+ *
+ *  gets length of next spi packet, created by #sfcb_worker
+ *
+ *  @param[in,out]  self                handle
+ *  @return         uint16_t           	current length of SPI packet, created by #sfcb_worker
+ *  @since          2022-08-19
+ *  @author         Andreas Kaeberlein
+ */
+uint16_t sfcb_spi_len (spi_flash_cb *self);
+
+
+
+/**
  *  @brief build-up
  *
  *  Reads from Flash and builds-up queues with circular buffer structure

@@ -382,7 +382,6 @@ void sfcb_worker (spi_flash_cb *self)
 }
 
 
-
 /**
  *  sfcb_busy
  *    checks if #sfcb_worker is free for new requests
@@ -395,6 +394,15 @@ int sfcb_busy (spi_flash_cb *self)
 	return 0;	
 }
 
+
+/**
+ *  sfcb_spi_len
+ *    gets length of next spi packet
+ */
+uint16_t sfcb_spi_len (spi_flash_cb *self)
+{
+	return self->uint16SpiLen;
+}
 
 
 /**
