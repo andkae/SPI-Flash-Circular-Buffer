@@ -67,6 +67,7 @@ int sfcb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8_t numCb
 	}
     /* set up list of flash circular buffers */
     self->uint8FlashType = flashType;
+    self->uint8FlashPresent = 0;	// not flash found
     self->uint8NumCbs = numCbs;
     self->uint16SpiLen = 0;
     self->uint8Busy = 0;

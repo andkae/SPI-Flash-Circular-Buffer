@@ -122,6 +122,7 @@ typedef struct spi_flash_cb_elem
 typedef struct spi_flash_cb
 {
     uint8_t		uint8FlashType;			/**< pointer to flashtype. see #t_spi_flash_cb_type_descr */
+    uint8_t		uint8FlashPresent;		/**< checks if selected flashtype is available */
     uint8_t		uint8NumCbs;			/**< number of circular buffers */
     void*		ptrCbs;					/**< List with flash circular buffers */
     uint8_t		uint8Spi[SFCB_SPI_BUF];	/**< transceive buffer between SPI/CB layer */

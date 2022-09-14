@@ -24,21 +24,6 @@
 #define __SPI_FLASH_CB_HAL_H
 
 
-/**
- *  @defgroup SPI Backends
- *
- *  spi backend selection
- *
- *  @{
- */
-#ifdef NEORV32
-    #define spi_flash_cb_spi_rw(...) neorv32_spi_rw(__VA_ARGS__)
-#else
-    #define spi_flash_cb_spi_rw(...)
-#endif
-/** @} */   // SPI
-
-
 /* C++ compatibility */
 #ifdef __cplusplus
 extern "C"
