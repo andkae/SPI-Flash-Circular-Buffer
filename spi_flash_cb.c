@@ -398,7 +398,7 @@ void sfcb_worker (spi_flash_cb *self)
 						self->uint8Busy = 0;
 						self->cmd = IDLE;	// go in idle
 						self->uint8Stg = SFCB_STG_00;
-						self->uint8Error = SFCB_ERO_NO;	// TODO
+						self->error = SPI_BUF_SIZE;	// requested operation ends with an error
 					}
 					/* SPI package is zero */
 					self->uint16SpiLen = self->uint16DataLen + 4;	// +4 for instruction
@@ -417,7 +417,6 @@ void sfcb_worker (spi_flash_cb *self)
 					self->uint16SpiLen = 0;
 					self->cmd = IDLE;	// go in idle
 					self->uint8Stg = SFCB_STG_00;
-					self->uint8Error = SFCB_ERO_NO;
 					self->uint8Busy = 0;
 					return;
 			}
@@ -478,7 +477,7 @@ int sfcb_mkcb (spi_flash_cb *self)
 	self->cmd = MKCB;
 	self->uint16IterElem = 0;
 	self->uint8Stg = SFCB_STG_00;
-	self->uint8Error = SFCB_ERO_NO;
+	self->error = NO;
 	self->uint8Busy = 1;
 	/* fine */
 	return 0;
@@ -514,7 +513,7 @@ int sfcb_add (spi_flash_cb *self, uint8_t cbID, void *data, uint16_t len)
 	self->uint8Busy = 1;
 	self->cmd = ADD;
 	self->uint8Stg = SFCB_STG_00;
-	self->uint8Error = SFCB_ERO_NO;
+	self->error = NO;
 	/* fine */
 	return 0;
 }
@@ -563,7 +562,7 @@ int sfcb_flash_read (spi_flash_cb *self, uint32_t adr, void *data, uint16_t len)
 	self->uint8Busy = 1;
 	self->cmd = RAW;	// RAW read from Flash
 	self->uint8Stg = SFCB_STG_00;
-	self->uint8Error = SFCB_ERO_NO;
+	self->error = NO;
 	/* fine */
 	return 0;
 }

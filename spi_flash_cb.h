@@ -48,19 +48,6 @@
 /** @} */
 
 
-/**
- * @defgroup SFCB_ERO
- *
- * Execution Stages
- *
- * @{
- */
-#define SFCB_ERO_NO (0x00)      /**<  No Error */
-/** @} */
-
-
-
-
 
 /* C++ compatibility */
 #ifdef __cplusplus
@@ -87,6 +74,24 @@ typedef enum __attribute__((packed))
     GET,    /**<  Get Data from Element of Circular buffer, there is no pop from the stack after get */
     RAW     /**<  Read Raw Data from flash */
 } t_sfcb_cmd;
+
+
+
+/**
+ *  @typedef t_sfcb_ero
+ *
+ *  @brief  Error class
+ *
+ *  #SFCB driver errors
+ *
+ *  @since  2022-12-08
+ *  @author Andreas Kaeberlein
+ */
+typedef enum __attribute__((packed))
+{
+    NO,   			/**<  No error orccured, all fine */
+    SPI_BUF_SIZE,   /**<  Spi buffer size to small for operation */
+} t_sfcb_ero;
 
 
 
@@ -140,7 +145,7 @@ typedef struct spi_flash_cb
     uint16_t    uint16IterElem;         /**< Iterator for splitted interaction, iteartor over elements in circular buffer */
     uint32_t    uint32IterPage;         /**< Page Iterator. Contents full byte address but in multiple of pages. F. e. captures last header page, next page write */
     uint8_t     uint8Stg;               /**< Execution stage, from last interaction */
-    uint8_t     uint8Error;             /**< Error code if something strange happend */
+    t_sfcb_ero  error;             		/**< Error code if something strange happend */
     void*       ptrData;                /**< Pointer to Payload data of CB Element */
     uint16_t    uint16DataLen;          /**< Size of payload data in bytes */
 
