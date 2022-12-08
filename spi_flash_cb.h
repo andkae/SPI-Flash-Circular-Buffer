@@ -35,20 +35,6 @@
 
 
 /**
- * @defgroup SFCB_CMD
- *
- * States for Worker
- *
- * @{
- */
-#define SFCB_CMD_IDLE	(0x00)      /**<  Nothing to do */
-#define SFCB_CMD_MKCB	(0x01)      /**<  Make Circular Buffers */
-#define SFCB_CMD_ADD	(0x02)      /**<  Add Element into Circular Buffer */
-#define SFCB_CMD_GET	(0x03)      /**<  Get Data from Element of Circular buffer, there is no pop from the stack after get */
-/** @} */
-
-
-/**
  * @defgroup SFCB_STG
  *
  * Execution Stages
@@ -81,6 +67,26 @@
 extern "C"
 {
 #endif // __cplusplus
+
+
+/**
+ *  @typedef t_sfcb_cmd
+ *
+ *  @brief  Command class
+ *
+ *  Current performed command class
+ *
+ *  @since  2022-12-08
+ *  @author Andreas Kaeberlein
+ */
+typedef enum __attribute__((packed))
+{
+    IDLE,	/**<  Nothing to do */
+    MKCB,  	/**<  Make Circular Buffers */
+    ADD,   	/**<  Add Element into Circular Buffer */
+	GET		/**<  Get Data from Element of Circular buffer, there is no pop from the stack after get */
+} t_sfcb_cmd;
+
 
 
 typedef struct spi_flash_cb_elem_head
@@ -128,7 +134,7 @@ typedef struct spi_flash_cb
     uint8_t		uint8Spi[SFCB_SPI_BUF];	/**< transceive buffer between SPI/CB layer */
     uint16_t	uint16SpiLen;			/**< used buffer length */
     uint8_t		uint8Busy;				/**< Performing splitted interaction of circular buffers */
-    uint8_t		uint8Cmd;				/**< Command to be executed */
+    t_sfcb_cmd	cmd;					/**< Command to be executed */
     uint8_t		uint8IterCb;			/**< Iterator for splitted interaction, iterator over Circular buffers */
     uint16_t	uint16IterElem;			/**< Iterator for splitted interaction, iteartor over elements in circular buffer */
     uint32_t	uint32IterPage;			/**< Page Iterator. Contents full byte address but in multiple of pages. F. e. captures last header page, next page write */

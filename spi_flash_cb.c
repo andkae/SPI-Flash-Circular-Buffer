@@ -71,7 +71,7 @@ int sfcb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8_t numCb
     self->uint8NumCbs = numCbs;
     self->uint16SpiLen = 0;
     self->uint8Busy = 0;
-	self->uint8Cmd = SFCB_CMD_IDLE;	// free for request
+	self->cmd = IDLE;	// free for request
 	self->uint8Stg = SFCB_STG_00;
     self->ptrCbs = cbMem;
     /* init list */
@@ -141,20 +141,20 @@ void sfcb_worker (spi_flash_cb *self)
 	spi_flash_cb_elem_head	head;					// circular buffer element header
 	
 	/* select part of FSM */
-    switch (self->uint8Cmd) {
+    switch (self->cmd) {
 		/* 
 		 * 
 		 * nothing todo 
 		 * 
 		 */
-		case SFCB_CMD_IDLE:
+		case IDLE:
 			return;
 		/* 
 		 * 
 		 * Allocate Next Free Element for Circular Buffers 
 		 * 
 		 */
-		case SFCB_CMD_MKCB:
+		case MKCB:
 			switch (self->uint8Stg) {
 				/* check for WIP */
 				case SFCB_STG_00:
@@ -236,7 +236,7 @@ void sfcb_worker (spi_flash_cb *self)
 								/* all active circular buffer queues processed? */
 								if ( 0 == ((spi_flash_cb_elem*) self->ptrCbs)[i].uint8Used ) {
 									self->uint16SpiLen = 0;
-									self->uint8Cmd = SFCB_CMD_IDLE;
+									self->cmd = IDLE;
 									self->uint8Stg = SFCB_STG_00;
 									self->uint8Busy = 0;
 									return;
@@ -251,7 +251,7 @@ void sfcb_worker (spi_flash_cb *self)
 							/* all available queues processed, go in idle */
 							if ( !(self->uint8IterCb < self->uint8NumCbs) ) {
 								self->uint16SpiLen = 0;
-								self->uint8Cmd = SFCB_CMD_IDLE;
+								self->cmd = IDLE;
 								self->uint8Stg = SFCB_STG_00;
 								self->uint8Busy = 0;
 								return;
@@ -296,7 +296,7 @@ void sfcb_worker (spi_flash_cb *self)
 		 * Add New Element to Circular Buffer
 		 * 
 		 */
-		case SFCB_CMD_ADD:
+		case ADD:
 			switch (self->uint8Stg) {
 				/* check for WIP */
 				case SFCB_STG_00:
@@ -321,7 +321,7 @@ void sfcb_worker (spi_flash_cb *self)
 					/* circular buffer written */
 					} else {
 						self->uint16SpiLen = 0;
-						self->uint8Cmd = SFCB_CMD_IDLE;
+						self->cmd = IDLE;
 						self->uint8Stg = SFCB_STG_00;
 						self->uint8Busy = 0;
 						return;
@@ -429,7 +429,7 @@ int sfcb_mkcb (spi_flash_cb *self)
 		self->uint8IterCb = i;	// search for unintializied queue, in case of only on circular buffer needes to rebuild
 	}
 	/* Setup new Job */
-	self->uint8Cmd = SFCB_CMD_MKCB;
+	self->cmd = MKCB;
 	self->uint16IterElem = 0;
 	self->uint8Stg = SFCB_STG_00;
 	self->uint8Error = SFCB_ERO_NO;
@@ -466,7 +466,7 @@ int sfcb_add (spi_flash_cb *self, uint8_t cbID, void *data, uint16_t len)
 	self->uint16IterElem = 0;	// used as ptrCbElemPl written pointer
 	/* Setup new Job */
 	self->uint8Busy = 1;
-	self->uint8Cmd = SFCB_CMD_ADD;
+	self->cmd = ADD;
 	self->uint8Stg = SFCB_STG_00;
 	self->uint8Error = SFCB_ERO_NO;
 	/* fine */
