@@ -52,7 +52,7 @@ typedef struct t_spi_flash_cb_type_descr {
     uint8_t     uint8FlashIstRdStateReg;        /**<  Flash IST: Read status reg                        */
     uint8_t     uint8FlashIstRdData;            /**<  Flash IST: Read data from flash                   */
     uint8_t     uint8FlashIstWrPage;            /**<  Flash IST: Write page                             */
-    uint8_t     uint8FlashTopoAdrBytes;         /**<  Flash Topo: Read data from flash                  */
+    uint8_t     uint8FlashTopoAdrBytes;         /**<  Flash Topo: Number of address bytes               */
     uint32_t    uint32FlashTopoSectorSizeByte;  /**<  Flash Topo: Flash Sector Size in Byte             */
     uint32_t    uint32FlashTopoPageSizeByte;    /**<  Flash Topo: Flash Page Size in Byte               */
     uint32_t    uint32FlashTopoTotalSizeByte;   /**<  Flash Topo: Total Flash Size in Byte              */
