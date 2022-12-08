@@ -84,7 +84,8 @@ typedef enum __attribute__((packed))
     IDLE,	/**<  Nothing to do */
     MKCB,  	/**<  Make Circular Buffers */
     ADD,   	/**<  Add Element into Circular Buffer */
-	GET		/**<  Get Data from Element of Circular buffer, there is no pop from the stack after get */
+	GET,	/**<  Get Data from Element of Circular buffer, there is no pop from the stack after get */
+	RAW		/**<  Read Raw Data from flash */
 } t_sfcb_cmd;
 
 
@@ -139,9 +140,9 @@ typedef struct spi_flash_cb
     uint16_t	uint16IterElem;			/**< Iterator for splitted interaction, iteartor over elements in circular buffer */
     uint32_t	uint32IterPage;			/**< Page Iterator. Contents full byte address but in multiple of pages. F. e. captures last header page, next page write */
     uint8_t		uint8Stg;				/**< Execution stage, from last interaction */
-    uint8_t		uint8Error;				/**< Error code if somehting strange happend */
-    void*		ptrCbElemPl;			/**< Pointer to Payload data of CB Element */
-    uint16_t	uint16CbElemPlSize;		/**< Size of payload data in bytes */
+    uint8_t		uint8Error;				/**< Error code if something strange happend */
+    void*		ptrData;				/**< Pointer to Payload data of CB Element */
+    uint16_t	uint16DataLen;			/**< Size of payload data in bytes */
     
 } spi_flash_cb;
 
