@@ -84,6 +84,18 @@ int sfcb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8_t numCb
 }
 
 
+
+/**
+ *  sfcb_flash_size
+ *    total flashsize
+ */
+uint32_t sfcb_flash_size (spi_flash_cb *self)
+{
+	return SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoTotalSizeByte;
+}
+
+
+
 /**
  *  sfcb_new_cb 
  *    creates new circular buffer entry

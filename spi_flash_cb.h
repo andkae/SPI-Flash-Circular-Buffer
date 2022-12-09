@@ -173,6 +173,20 @@ int sfcb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8_t numCb
 
 
 /**
+ *  @brief flash size
+ *
+ *  total flash size in byte
+ *
+ *  @param[in,out]  self                handle
+ *  @return         uint32_t            size in byte
+ *  @since          2022-12-09
+ *  @author         Andreas Kaeberlein
+ */
+uint32_t sfcb_flash_size (spi_flash_cb *self);
+
+
+
+/**
  *  @brief new_cb
  *
  *  creates new circular buffer entry in flash parition table
