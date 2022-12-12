@@ -75,14 +75,15 @@ int sfcb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8_t numCb
     self->uint8Busy = 0;
 	self->uint8Cmd = SFCB_CMD_IDLE;	// free for request
 	self->uint8Stg = SFCB_STG_00;
-    self->ptrCbs = cbMem;
+    self->ptrCbs = (spi_flash_cb_elem*) cbMem;
 	self->uint8Error = SFCB_ERO_NO;
     self->ptrCbElemPl = NULL;
 	self->uint16CbElemPlSize = 0;
-	/* init list */
-    for ( uint8_t i=0; i<self->uint8NumCbs; i++ ) {
-		((spi_flash_cb_elem*) self->ptrCbs)[i].uint8Used = 0;
-		((spi_flash_cb_elem*) self->ptrCbs)[i].uint8Init = 0;
+	/* init circular buffer handles */
+	for ( uint8_t i = 0; i < (self->uint8NumCbs); i++ ) {
+		(&self->ptrCbs[i])->uint8Used = 0;
+		(&self->ptrCbs[i])->uint8Init = 0;
+		sfcb_printf("  INFO:%s:ptrCbs[%i] = %p\n", (&self->ptrCbs[i]));	// unit test output
 	}
 	/* normal end */
 	return 0;
