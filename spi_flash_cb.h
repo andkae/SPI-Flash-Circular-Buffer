@@ -29,8 +29,24 @@
  * @{
  */
 #ifndef SFCB_SPI_BUF
-    #define SFCB_SPI_BUF    266     /**<  SPI buffer between logical, and HW layer; Page Size + some bytes for instruction  */
+	#define SFCB_SPI_BUF	266		/**<  SPI buffer between logical, and HW layer; Page Size + some bytes for instruction  */
 #endif
+/** @} */
+
+
+/**
+ * @defgroup SFCB_CMD
+ *
+ * States for Worker
+ *
+ * @{
+ */
+#define SFCB_CMD_IDLE	(0x00)      /**<  Nothing to do */
+#define SFCB_CMD_MKCB	(0x01)      /**<  Make Circular Buffers */
+#define SFCB_CMD_ADD	(0x02)      /**<  Add Element into Circular Buffer */
+#define SFCB_CMD_GET	(0x03)      /**<  Get Data from Element of Circular buffer, there is no pop from the stack after get */
+#define SFCB_CMD_RAW	(0x04)		/**<  get Raw DATA from SPI flash */
+
 /** @} */
 
 
@@ -41,11 +57,24 @@
  *
  * @{
  */
-#define SFCB_STG_00 (0x00)      /**<  Stage 0 */
-#define SFCB_STG_01 (0x01)      /**<  Stage 1 */
-#define SFCB_STG_02 (0x02)      /**<  Stage 2 */
-#define SFCB_STG_03 (0x03)      /**<  Stage 3 */
+#define SFCB_STG_00	(0x00)      /**<  Stage 0 */
+#define SFCB_STG_01	(0x01)      /**<  Stage 1 */
+#define SFCB_STG_02	(0x02)      /**<  Stage 2 */
+#define SFCB_STG_03	(0x03)      /**<  Stage 3 */
 /** @} */
+
+
+/**
+ * @defgroup SFCB_ERO
+ *
+ * Execution Stages
+ *
+ * @{
+ */
+#define SFCB_ERO_NO	(0x00)      /**<  No Error */
+/** @} */
+
+
 
 
 
@@ -56,68 +85,29 @@ extern "C"
 #endif // __cplusplus
 
 
-/**
- *  @typedef t_sfcb_cmd
- *
- *  @brief  Command class
- *
- *  Current performed command class
- *
- *  @since  2022-12-08
- *  @author Andreas Kaeberlein
- */
-typedef enum __attribute__((packed))
-{
-    IDLE,   /**<  Nothing to do */
-    MKCB,   /**<  Make Circular Buffers */
-    ADD,    /**<  Add Element into Circular Buffer */
-    GET,    /**<  Get Data from Element of Circular buffer, there is no pop from the stack after get */
-    RAW     /**<  Read Raw Data from flash */
-} t_sfcb_cmd;
-
-
-
-/**
- *  @typedef t_sfcb_ero
- *
- *  @brief  Error class
- *
- *  #SFCB driver errors
- *
- *  @since  2022-12-08
- *  @author Andreas Kaeberlein
- */
-typedef enum __attribute__((packed))
-{
-    NO,   			/**<  No error orccured, all fine */
-    SPI_BUF_SIZE,   /**<  Spi buffer size to small for operation */
-} t_sfcb_ero;
-
-
-
 typedef struct spi_flash_cb_elem_head
 {
-    uint32_t    uint32MagicNum; /**< Magic Number for marking valid block */
-    uint32_t    uint32IdNum;    /**< Series Number of ID */
+    uint32_t	uint32MagicNum;	/**< Magic Number for marking valid block */
+    uint32_t	uint32IdNum;	/**< Series Number of ID */
 } __attribute__((packed)) spi_flash_cb_elem_head;
 
 
 
 typedef struct spi_flash_cb_elem
 {
-    uint8_t     uint8Used;                  /**< Entry is used */
-    uint8_t     uint8Init;                  /**< Data structure initialized */
-    uint32_t    uint32MagicNum;             /**< Magic Number for marking valid block */
-    uint32_t    uint32IdNumMax;             /**< Contents highest elment number in logical circular buffer. Circular buffer elements are ascending numbered starting at zero */
-    uint32_t    uint32IdNumMin;             /**< lowest element number in circular buffer */
-    uint32_t    uint32StartSector;          /**< Start Sector of the Circular Buffer */
-    uint32_t    uint32StopSector;           /**< Stop Sector. At least two sectors are required, otherwise will sector erase delete complete buffer */
-    uint32_t    uint32StartPageWrite;       /**< Start Page number of next entry */
-    uint32_t    uint32StartPageIdMin;       /**< Start page of Circular buffer entry with lowest number, used for sector erase */
-    uint16_t    uint16NumPagesPerElem;      /**< Number of pages per element */
-    uint16_t    uint16NumEntriesMax;        /**< Maximal Number of entries in circular buffer caused by partition table */
-    uint16_t    uint16NumEntries;           /**< Number of entries in circular buffer */
-} __attribute__((packed)) spi_flash_cb_elem;
+    uint8_t		uint8Used;					/**< Entry is used */
+    uint8_t		uint8Init;					/**< Data structure initialized */
+    uint32_t	uint32MagicNum;				/**< Magic Number for marking valid block */
+    uint32_t	uint32IdNumMax;				/**< Contents highest elment number in logical circular buffer. Circular buffer elements are ascending numbered starting at zero */
+    uint32_t	uint32IdNumMin;				/**< lowest element number in circular buffer */
+    uint32_t	uint32StartSector;			/**< Start Sector of the Circular Buffer */
+    uint32_t	uint32StopSector;			/**< Stop Sector. At least two sectors are required, otherwise will sector erase delete complete buffer */
+    uint32_t	uint32StartPageWrite;		/**< Start Page number of next entry */
+    uint32_t	uint32StartPageIdMin;		/**< Start page of Circular buffer entry with lowest number, used for sector erase */
+    uint16_t	uint16NumPagesPerElem;		/**< Number of pages per element */
+    uint16_t	uint16NumEntriesMax;		/**< Maximal Number of entries in circular buffer caused by partition table */
+    uint16_t	uint16NumEntries;			/**< Number of entries in circular buffer */
+} spi_flash_cb_elem;
 
 
 
@@ -133,22 +123,23 @@ typedef struct spi_flash_cb_elem
  */
 typedef struct spi_flash_cb
 {
-    uint8_t     uint8FlashType;         /**< pointer to flashtype. see #t_spi_flash_cb_type_descr */
-    uint8_t     uint8FlashPresent;      /**< checks if selected flashtype is available */
-    uint8_t     uint8NumCbs;            /**< number of circular buffers */
-    void*       ptrCbs;                 /**< List with flash circular buffers */
-    uint8_t     uint8Spi[SFCB_SPI_BUF]; /**< transceive buffer between SPI/CB layer */
-    uint16_t    uint16SpiLen;           /**< used buffer length */
-    uint8_t     uint8Busy;              /**< Performing splitted interaction of circular buffers */
-    t_sfcb_cmd  cmd;                    /**< Command to be executed */
-    uint8_t     uint8IterCb;            /**< Iterator for splitted interaction, iterator over Circular buffers */
-    uint16_t    uint16IterElem;         /**< Iterator for splitted interaction, iteartor over elements in circular buffer */
-    uint32_t    uint32IterPage;         /**< Page Iterator. Contents full byte address but in multiple of pages. F. e. captures last header page, next page write */
-    uint8_t     uint8Stg;               /**< Execution stage, from last interaction */
-    t_sfcb_ero  error;             		/**< Error code if something strange happend */
-    void*       ptrData;                /**< Pointer to Payload data of CB Element */
-    uint16_t    uint16DataLen;          /**< Size of payload data in bytes */
-
+    uint8_t		uint8FlashType;			/**< pointer to flashtype. see #t_spi_flash_cb_type_descr */
+    uint8_t		uint8FlashPresent;		/**< checks if selected flashtype is available */
+    uint8_t		uint8NumCbs;			/**< number of circular buffers */
+    void*		ptrCbs;					/**< List with flash circular buffers */
+    uint8_t		uint8Spi[SFCB_SPI_BUF];	/**< transceive buffer between SPI/CB layer */
+    uint16_t	uint16SpiLen;			/**< used buffer length */
+    uint8_t		uint8Busy;				/**< Performing splitted interaction of circular buffers */
+    uint8_t		uint8Cmd;				/**< Command to be executed */
+    uint8_t		uint8IterCb;			/**< Iterator for splitted interaction, iterator over Circular buffers */
+    uint16_t	uint16IterElem;			/**< Iterator for splitted interaction, iteartor over elements in circular buffer */
+    uint32_t	uint32IterPage;			/**< Page Iterator. Contents full byte address but in multiple of pages. F. e. captures last header page, next page write */
+    uint8_t		uint8Stg;				/**< Execution stage, from last interaction */
+    uint8_t		uint8Error;				/**< Error code if somehting strange happend */
+    void*		ptrCbElemPl;			/**< Pointer to Payload data of CB Element */
+	uint16_t	uint16DataLen;			/**< data length */
+    uint16_t	uint16CbElemPlSize;		/**< Size of payload data in bytes */
+    
 } spi_flash_cb;
 
 
@@ -173,20 +164,6 @@ int sfcb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8_t numCb
 
 
 /**
- *  @brief flash size
- *
- *  total flash size in byte
- *
- *  @param[in,out]  self                handle
- *  @return         uint32_t            size in byte
- *  @since          2022-12-09
- *  @author         Andreas Kaeberlein
- */
-uint32_t sfcb_flash_size (spi_flash_cb *self);
-
-
-
-/**
  *  @brief new_cb
  *
  *  creates new circular buffer entry in flash parition table
@@ -195,7 +172,7 @@ uint32_t sfcb_flash_size (spi_flash_cb *self);
  *  @param[in]      magicNum            Magic Number for marking enties valid, should differ between different Circular buffer entries
  *  @param[in]      elemSizeByte        Size of one element in the circular buffer in byte
  *  @param[in]      numElems            minimal number of elements in the circular buffer, through need of sector erase and not deleting all data can be this number higher then requested
- *  @param[in,out]  *cbID               Circular buffer number
+ *  @param[in,out]  *cbID            	Circular buffer number
  *  @return         int                 state
  *  @retval         0                   OKAY
  *  @retval         1                   No free circular buffer slots, allocate more static memory
@@ -210,7 +187,7 @@ int sfcb_new_cb (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeByte, u
  *  @brief worker
  *
  *  Services Circular buffer layer, request/processes SPI packets.
- *  Executes request from #sfcb_mkcb,
+ *  Executes request from #sfcb_mkcb, 
  *
  *  @param[in,out]  self                handle
  *  @return         void                state
@@ -227,7 +204,7 @@ void sfcb_worker (spi_flash_cb *self);
  *  checks if #sfcb_worker is free for new requests
  *
  *  @param[in,out]  self                handle
- *  @return         int                 state
+ *  @return         int                	state
  *  @retval         0                   idle
  *  @retval         1                   busy
  *  @since          2022-07-29
@@ -243,7 +220,7 @@ int sfcb_busy (spi_flash_cb *self);
  *  gets length of next spi packet, created by #sfcb_worker
  *
  *  @param[in,out]  self                handle
- *  @return         uint16_t            current length of SPI packet, created by #sfcb_worker
+ *  @return         uint16_t           	current length of SPI packet, created by #sfcb_worker
  *  @since          2022-08-19
  *  @author         Andreas Kaeberlein
  */
@@ -257,7 +234,7 @@ uint16_t sfcb_spi_len (spi_flash_cb *self);
  *  Reads from Flash and builds-up queues with circular buffer structure
  *
  *  @param[in,out]  self                handle
- *  @return         int                 state
+ *  @return         int                	state
  *  @retval         0                   Request accepted
  *  @retval         1                   Not Free for new Requests, wait
  *  @retval         2                   no active queue, add via #spi_flash_cb_add
@@ -274,37 +251,20 @@ int sfcb_mkcb (spi_flash_cb *self);
  *  adds element to circular buffer structure
  *
  *  @param[in,out]  self                handle
- *  @param[in]      cbID                Logical Number of Cicular Buffer queue
- *  @param[in]      *data               Pointer to data array which should add
- *  @param[in]      len                 size of *data in bytes
- *  @return         int                 state
+ *  @param[in]      cbID            	Logical Number of Cicular Buffer queue
+ *  @param[in]  	*data            	Pointer to data array which should add
+ *  @param[in]  	len           		size of *data in bytes
+ *  @return         int                	state
  *  @retval         0                   Request accepted.
  *  @retval         1                   Worker is busy, wait for processing last job.
  *  @retval         2                   Circular Buffer is not prepared for adding new element, run #sfcb_worker.
- *  @retval         4                   Data segement is larger then reserved circular buffer space.
+ * 	@retval         4                   Data segement is larger then reserved circular buffer space.
  *  @since          2022-07-28
  *  @author         Andreas Kaeberlein
  */
 int sfcb_add (spi_flash_cb *self, uint8_t cbID, void *data, uint16_t len);
 
 
-
-/**
- *  @brief SPI Flash Raw Read
- *
- *  reads chunks of memory from SPI Flash
- *
- *  @param[in,out]  self                handle
- *  @param[in]      adr                 Flash memory address
- *  @param[in]      *data               Pointer to data array in which should be read-in
- *  @param[in]      len                 size of *data in bytes
- *  @return         int                 state
- *  @retval         0                   Request accepted.
- *  @retval         1                   Worker is busy, wait for processing last job.
- *  @since          2022-12-08
- *  @author         Andreas Kaeberlein
- */
-int sfcb_flash_read (spi_flash_cb *self, uint32_t adr, void *data, uint16_t len);
 
 
 
