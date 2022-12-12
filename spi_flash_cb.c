@@ -63,7 +63,9 @@ uint32_t spi_flash_cb_max(uint16_t val1, uint16_t val2)
  */
 int sfcb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8_t numCbs)
 {
-    /* check if provided flash type is valid */
+    /* Function call message */
+	sfcb_printf("__FUNCTION__ = %s\n", __FUNCTION__);
+	/* check if provided flash type is valid */
     if ( flashType > ((sizeof(SPI_FLASH_CB_TYPES)/sizeof(SPI_FLASH_CB_TYPES[0]))-1) ) {
 		return 1;
 	}
@@ -81,8 +83,8 @@ int sfcb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8_t numCb
 	self->uint16CbElemPlSize = 0;
 	/* init circular buffer handles */
 	for ( uint8_t i = 0; i < (self->uint8NumCbs); i++ ) {
-		(&self->ptrCbs[i])->uint8Used = 0;
-		(&self->ptrCbs[i])->uint8Init = 0;
+		(self->ptrCbs[i]).uint8Used = 0;
+		(self->ptrCbs[i]).uint8Init = 0;
 		sfcb_printf("  INFO:%s:ptrCbs[%i] = %p\n", (&self->ptrCbs[i]));	// unit test output
 	}
 	/* normal end */
