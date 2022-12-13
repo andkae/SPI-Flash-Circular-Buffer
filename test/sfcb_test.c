@@ -35,13 +35,19 @@
 
 
 /**
- *  Main
- *  ----
+ *  prints raw data of SFCB
  */
-int print ()
+int print_raw_sfcb_cb (void* sfcb_cb, uint8_t num_sfcb_cb )
 {
-	
-
+	/* print to console */
+	for ( uint8_t i = 0; i < num_sfcb_cb; i++ ) {
+		printf("  INFO:sfcb_cb[%i]: ", i);
+		for ( uint8_t j = 0; j < sizeof(spi_flash_cb_elem); j++ ) {
+			printf("%02x", *(((uint8_t*) ((spi_flash_cb_elem*) sfcb_cb))+i*sizeof(spi_flash_cb_elem)+j));
+		}
+		printf("\n");
+	}
+	return 0;
 }
 
 
@@ -88,15 +94,9 @@ int main ()
 			printf("ERROR:%s:sfcb_init:uint8Init", __FUNCTION__);
 			goto ERO_END;
 		}
-		/* raw dump */
-		printf("  INFO:%s:sfcb_cb[%i]: ", __FUNCTION__, i);
-		for ( uint8_t j = 0; j < sizeof(sfcb_cb[0]); j++ ) {
-			printf("%02x", *(((uint8_t*) &sfcb_cb)+i*sizeof(sfcb_cb[0])+j));
-		}
-		printf("\n");
 	}
-	
-	
+	/* raw dump */
+	print_raw_sfcb_cb(&sfcb_cb, sizeof(sfcb_cb)/sizeof(sfcb_cb[0]));
 	
 	
 
