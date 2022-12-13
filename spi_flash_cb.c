@@ -85,7 +85,9 @@ int sfcb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8_t numCb
 	for ( uint8_t i = 0; i < (self->uint8NumCbs); i++ ) {
 		(self->ptrCbs[i]).uint8Used = 0;
 		(self->ptrCbs[i]).uint8Init = 0;
-		sfcb_printf("  INFO:%s:ptrCbs[%i] = %p\n", (&self->ptrCbs[i]));	// unit test output
+		sfcb_printf("  INFO:%s:ptrCbs[%i]_p = %p\n", 			__FUNCTION__, i, (&self->ptrCbs[i]));				// unit test output
+		sfcb_printf("  INFO:%s:ptrCbs[%i].uint8Used_p = %p\n",	__FUNCTION__, i, &((self->ptrCbs[i]).uint8Used));	// output address
+		sfcb_printf("  INFO:%s:ptrCbs[%i].uint8Init_p = %p\n",	__FUNCTION__, i, &((self->ptrCbs[i]).uint8Init));	// output address
 	}
 	/* normal end */
 	return 0;
