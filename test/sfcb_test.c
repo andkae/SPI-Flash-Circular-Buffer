@@ -61,25 +61,17 @@ int main ()
     /** Variables **/
 	spi_flash_cb		sfcb;		// SPI Flash as circular buffer
 	spi_flash_cb_elem	sfcb_cb[5];	// five logical parts in SPI Flash
+	uint8_t				uint8Temp;	// help variable
 	
-	
-	uint32_t            uint32Temp;
-    uint32_t            i;                  // iterartor
-    uint8_t             uint8Buf[10];
-    uint32_t            uint32Buf8Len;
-    uint8_t*            uint8PtrBuf16M;
-    uint8_t*            uint8PtrBuf16M_2;
-    int                 intFexit;           // functions exit code
-
 
 	/* entry message */
 	printf("INFO:%s: unit test started\n", __FUNCTION__);
 	
 	/* sfcb_init */
 	printf("INFO:%s:sfcb_init\n", __FUNCTION__);
-	printf("INFO:%s:sfcb_p       = %p\n", __FUNCTION__, &sfcb);
-	printf("INFO:%s:sfcb_cb_p    = %p\n", __FUNCTION__, &sfcb_cb);
-	printf("INFO:%s:sfcb_cb[0]_s = %i\n", __FUNCTION__, sizeof(sfcb_cb[0]));
+	printf("INFO:%s:sfcb_p          = %p\n", 	__FUNCTION__, &sfcb);
+	printf("INFO:%s:sfcb_cb_p       = %p\n", 	__FUNCTION__, &sfcb_cb);
+	printf("INFO:%s:sfcb_cb[0]_size = 0x%x\n",	__FUNCTION__, (int) sizeof(sfcb_cb[0]));
 	memset(sfcb_cb, 0xaf, sizeof(sfcb_cb));	// mess-up memory to check init
 	/* int spi_flash_cb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8_t numCbs) */
 	sfcb_init (&sfcb, 0, &sfcb_cb, sizeof(sfcb_cb)/sizeof(sfcb_cb[0]));
@@ -99,45 +91,16 @@ int main ()
 	print_raw_sfcb_cb(&sfcb_cb, sizeof(sfcb_cb)/sizeof(sfcb_cb[0]));
 	
 	
+	/* sfcb_new_cb */
+	printf("INFO:%s:sfcb_new_cb\n", __FUNCTION__);
+
+	sfcb_new_cb (&sfcb, 0x47114711, 244, 32, &uint8Temp);	// start-up counter with operation data has 256 elements
+
+
+	print_raw_sfcb_cb(&sfcb_cb, sizeof(sfcb_cb)/sizeof(sfcb_cb[0]));
 
 
 
-
-
-
-
-//    /* allocate Mmemory */
-//    uint8PtrBuf16M = (uint8_t*) malloc(uint32PtrBuf16MLen);
-//    uint8PtrBuf16M_2 = (uint8_t*) malloc(uint32PtrBuf16MLen);
-//    if ( (NULL == uint8PtrBuf16M) || (NULL == uint8PtrBuf16M_2) ) {
-//        printf("ERROR:%s: memory allocation for test\n", __FUNCTION__);
-//        goto ERO_END;
-//    }
-//
-//
-//    /* init handle */
-//    spiflashdrv_init( &handle );
-//
-//
-//    /* spiflashdrv_rdid_unique */
-//    printf("INFO:%s:spiflashdrv_rdid_unique\n", __FUNCTION__);
-//    if ( 0 != spiflashdrv_rdid_unique(&handle) ) {
-//        printf("ERROR:%s:spiflashdrv_rdid_unique\n", __FUNCTION__);
-//        goto ERO_END;
-//    }
-//    if ( 2 != handle.uint32UniqueRdIdLen) {
-//        printf("ERROR:%s:spiflashdrv_rdid_unique, exp=2, is=%d\n", __FUNCTION__, handle.uint32UniqueRdIdLen);
-//        goto ERO_END;
-//    }
-//    if ( 0x9e != handle.uint8PtrUniqueRdId[0] ) {
-//        printf("ERROR:%s:spiflashdrv_rdid_unique, exp=0x9e, is=0x%02x\n", __FUNCTION__, handle.uint8PtrUniqueRdId[0]);
-//        goto ERO_END;
-//    }
-//    if ( 0x9f != handle.uint8PtrUniqueRdId[1] ) {
-//        printf("ERROR:%s:spiflashdrv_rdid_unique, exp=0x9f, is=0x%02x\n", __FUNCTION__, handle.uint8PtrUniqueRdId[1]);
-//        goto ERO_END;
-//    }
-//
 
 
     /* gracefull end */
