@@ -8,3 +8,9 @@
 /**/*.asm
 /**/*.c.o
 #
+
+
+# Unit test
+#
+test/sfcb_test
+#
