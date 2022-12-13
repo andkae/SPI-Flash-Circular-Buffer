@@ -113,34 +113,36 @@ int sfcb_new_cb (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeByte, u
 	/** help variables **/
 	const uint8_t		uint8NumHeadBytes = 2*sizeof(((spi_flash_cb_elem *)0)->uint32MagicNum) + sizeof(((spi_flash_cb_elem *)0)->uint32IdNumMax);
 	spi_flash_cb_elem*	cb_elem = self->ptrCbs;
-	uint8_t				uint8FreeCbEntry;
+	uint8_t				cbNew;		// queue of circular buffer new entry number
 	uint32_t			uint32StartSector;
 	uint32_t			uint32NumSectors;
 	
+    /* Function call message */
+	sfcb_printf("__FUNCTION__ = %s\n", __FUNCTION__);
 	/* check for free Slot number */
 	uint32StartSector = 0;
-	for ( uint8FreeCbEntry = 0; uint8FreeCbEntry < (self->uint8NumCbs); uint8FreeCbEntry++ ) {
-		if ( 0 == cb_elem[uint8FreeCbEntry].uint8Used ) {
+	for ( cbNew = 0; cbNew < (self->uint8NumCbs); cbNew++ ) {
+		if ( 0 == cb_elem[cbNew].uint8Used ) {
 			break;
 		} else {
-			uint32StartSector = cb_elem[uint8FreeCbEntry].uint32StopSector + 1;	// next sector is used 
+			uint32StartSector = cb_elem[cbNew].uint32StopSector + 1;	// next sector is used 
 		}
 	}
-	if ( uint8FreeCbEntry == (self->uint8NumCbs) ) {
+	if ( cbNew == (self->uint8NumCbs) ) {
 		return 1;	// no free circular buffer slots
 	}	
 	/* prepare slot */
-	cb_elem[uint8FreeCbEntry].uint8Used = 1;		// occupied
-	cb_elem[uint8FreeCbEntry].uint32IdNumMax = 0;	// in case of uninitialized memory
-	cb_elem[uint8FreeCbEntry].uint32IdNumMin = (uint32_t) (~0);	// assign highest number
-	cb_elem[uint8FreeCbEntry].uint32MagicNum = magicNum;	// used magic number for the circular buffer
-	cb_elem[uint8FreeCbEntry].uint16NumPagesPerElem = spi_flash_cb_ceildivide(elemSizeByte+uint8NumHeadBytes, SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoPageSizeByte);	// calculate in multiple of pages
-	cb_elem[uint8FreeCbEntry].uint32StartSector = uint32StartSector;
-	uint32NumSectors = spi_flash_cb_max(2, spi_flash_cb_ceildivide(numElems*cb_elem[uint8FreeCbEntry].uint16NumPagesPerElem, SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashTopoPagesPerSector));
-	cb_elem[uint8FreeCbEntry].uint32StopSector = cb_elem[uint8FreeCbEntry].uint32StartSector+uint32NumSectors-1;
-	cb_elem[uint8FreeCbEntry].uint16NumEntriesMax = (uint16_t) (uint32NumSectors*SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashTopoPagesPerSector);
-	cb_elem[uint8FreeCbEntry].uint16NumEntries = 0;
-	*cbID = uint8FreeCbEntry;
+	(self->ptrCbs[cbNew]).uint8Used = 1;		// occupied
+	(self->ptrCbs[cbNew]).uint32IdNumMax = 0;	// in case of uninitialized memory
+	(self->ptrCbs[cbNew]).uint32IdNumMin = (uint32_t) (~0);	// assign highest number
+	(self->ptrCbs[cbNew]).uint32MagicNum = magicNum;	// used magic number for the circular buffer
+	(self->ptrCbs[cbNew]).uint16NumPagesPerElem = spi_flash_cb_ceildivide(elemSizeByte+uint8NumHeadBytes, SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoPageSizeByte);	// calculate in multiple of pages
+	(self->ptrCbs[cbNew]).uint32StartSector = uint32StartSector;
+	uint32NumSectors = spi_flash_cb_max(2, spi_flash_cb_ceildivide(numElems*cb_elem[cbNew].uint16NumPagesPerElem, SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashTopoPagesPerSector));
+	(self->ptrCbs[cbNew]).uint32StopSector = cb_elem[cbNew].uint32StartSector+uint32NumSectors-1;
+	(self->ptrCbs[cbNew]).uint16NumEntriesMax = (uint16_t) (uint32NumSectors*SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashTopoPagesPerSector);
+	(self->ptrCbs[cbNew]).uint16NumEntries = 0;
+	*cbID = cbNew;
 	/* succesfull */
 	return 0;
 }
@@ -287,7 +289,8 @@ void sfcb_worker (spi_flash_cb *self)
 					break;
 				/* Assemble Command for Sector ERASE */	
 				case SFCB_STG_02:
-					uint32Temp = ((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint32IdNumMin;
+					uint32Temp = (self->ptrCbs[self->uint8IterCb]).uint32StartPageIdMin;	// get startpage of oldest entry, prepare for delete
+					uint32Temp = (uint32Temp & ~(SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoSectorSizeByte - 1));	// align to sub sector address
 					self->uint8Spi[0] = SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashIstEraseSector;
 					self->uint8Spi[1] = ((uint32Temp >> 16) & 0xFF);	// High Address
 					self->uint8Spi[2] = ((uint32Temp >> 8) & 0xFF);

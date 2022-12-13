@@ -171,7 +171,7 @@ typedef struct spi_flash_cb
  *
  *  @param[in,out]  self                handle
  *  @param[in]      flashType           index of flash type in #SPI_FLASH_CB_TYPES
- *  @param[in,out]  *cbMem              pointer to allocated memory for circulat buffer list
+ *  @param[in,out]  *cbMem              pointer to allocated memory for circulat buffer list, see #spi_flash_cb_elem
  *  @param[in]      numCbs              number of maximum allowed circular buffers
  *  @return         int                 state
  *  @retval         0                   OKAY
