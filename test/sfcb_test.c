@@ -41,7 +41,7 @@ int print_raw_sfcb_cb (void* sfcb_cb, uint8_t num_sfcb_cb )
 {
 	/* print to console */
 	for ( uint8_t i = 0; i < num_sfcb_cb; i++ ) {
-		printf("  INFO:sfcb_cb[%i]: ", i);
+		printf("INFO:sfcb_cb[%i]: ", i);
 		for ( uint8_t j = 0; j < sizeof(spi_flash_cb_elem); j++ ) {
 			printf("%02x", *(((uint8_t*) ((spi_flash_cb_elem*) sfcb_cb))+i*sizeof(spi_flash_cb_elem)+j));
 		}
@@ -93,8 +93,13 @@ int main ()
 	
 	/* sfcb_new_cb */
 	printf("INFO:%s:sfcb_new_cb\n", __FUNCTION__);
+	sfcb_new_cb (&sfcb, 0x47114711, 244, 32, &uint8Temp);	// start-up counter with operation
+	sfcb_new_cb (&sfcb, 0x08150815, 12280, 16, &uint8Temp);	// error data collection 12KiB
 
-	sfcb_new_cb (&sfcb, 0x47114711, 244, 32, &uint8Temp);	// start-up counter with operation data has 256 elements
+
+
+
+
 
 
 	print_raw_sfcb_cb(&sfcb_cb, sizeof(sfcb_cb)/sizeof(sfcb_cb[0]));

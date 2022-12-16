@@ -33,7 +33,7 @@
  *    divides to the power 2
  *    round always up
  */
-uint32_t spi_flash_cb_ceildivide(uint32_t dividend, uint32_t divisor)
+static uint32_t sfcb_ceildivide_uint32(uint32_t dividend, uint32_t divisor)
 {   
     if ( dividend != 0 ) {
         return ( 1 + ( (dividend-1) / divisor ) );
@@ -47,7 +47,7 @@ uint32_t spi_flash_cb_ceildivide(uint32_t dividend, uint32_t divisor)
  *  spi_flash_cb_max
  *    get maximum of number
  */
-uint32_t spi_flash_cb_max(uint16_t val1, uint16_t val2)
+static uint16_t sfcb_max_uint16(uint16_t val1, uint16_t val2)
 {
     if ( val1 > val2 ) {
 		return val1;
@@ -113,24 +113,28 @@ uint32_t sfcb_flash_size (spi_flash_cb *self)
 int sfcb_new_cb (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_t numElems, uint8_t *cbID)
 {	
 	/** help variables **/
-	const uint8_t		uint8NumHeadBytes = 2*sizeof(((spi_flash_cb_elem *)0)->uint32MagicNum) + sizeof(((spi_flash_cb_elem *)0)->uint32IdNumMax);
-	spi_flash_cb_elem*	cb_elem = self->ptrCbs;
-	uint8_t				cbNew;		// queue of circular buffer new entry number
-	uint32_t			uint32StartSector;
-	uint32_t			uint32NumSectors;
+	const uint8_t	uint8PagesPerSector = (uint8_t) (SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoSectorSizeByte / SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoPageSizeByte);
+	const uint16_t	elemTotalSize = (uint16_t) (elemSizeByte + sizeof(spi_flash_cb_elem_head));	// payload size + header size
+	uint8_t			cbNew;				// queue of circular buffer new entry number
+	uint32_t		uint32StartSector;
+	uint16_t		uint16NumSectors;
+	
 	
     /* Function call message */
 	sfcb_printf("__FUNCTION__ = %s\n", __FUNCTION__);
+	sfcb_printf("  INFO:%s:sfcb_p = %p\n", __FUNCTION__, self);	
+	sfcb_printf("  INFO:%s:ptrCb[0]_p = %p\n", __FUNCTION__, &(self->ptrCbs[0]));	
 	/* check for free Slot number */
 	uint32StartSector = 0;
 	for ( cbNew = 0; cbNew < (self->uint8NumCbs); cbNew++ ) {
-		if ( 0 == cb_elem[cbNew].uint8Used ) {
-			break;
+		if ( 0 != (self->ptrCbs[cbNew]).uint8Used ) {	// queue is used
+			uint32StartSector = (self->ptrCbs[cbNew]).uint32StopSector + 1;	// calculate start address of next queue
 		} else {
-			uint32StartSector = cb_elem[cbNew].uint32StopSector + 1;	// next sector is used 
+			break;	// empty queue found
 		}
 	}
 	if ( cbNew == (self->uint8NumCbs) ) {
+		sfcb_printf("  ERROR:%s:sfcb_cb exceeded total available number of %i cbs\n", __FUNCTION__, (self->uint8NumCbs));
 		return 1;	// no free circular buffer slots
 	}	
 	/* prepare slot */
@@ -138,13 +142,24 @@ int sfcb_new_cb (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeByte, u
 	(self->ptrCbs[cbNew]).uint32IdNumMax = 0;	// in case of uninitialized memory
 	(self->ptrCbs[cbNew]).uint32IdNumMin = (uint32_t) (~0);	// assign highest number
 	(self->ptrCbs[cbNew]).uint32MagicNum = magicNum;	// used magic number for the circular buffer
-	(self->ptrCbs[cbNew]).uint16NumPagesPerElem = spi_flash_cb_ceildivide(elemSizeByte+uint8NumHeadBytes, SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoPageSizeByte);	// calculate in multiple of pages
+	(self->ptrCbs[cbNew]).uint16NumPagesPerElem = (uint16_t) sfcb_ceildivide_uint32(elemTotalSize, SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoPageSizeByte);	// calculate in multiple of pages
 	(self->ptrCbs[cbNew]).uint32StartSector = uint32StartSector;
-	uint32NumSectors = spi_flash_cb_max(2, spi_flash_cb_ceildivide(numElems*cb_elem[cbNew].uint16NumPagesPerElem, SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashTopoPagesPerSector));
-	(self->ptrCbs[cbNew]).uint32StopSector = cb_elem[cbNew].uint32StartSector+uint32NumSectors-1;
-	(self->ptrCbs[cbNew]).uint16NumEntriesMax = (uint16_t) (uint32NumSectors*SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashTopoPagesPerSector);
+	uint16NumSectors = sfcb_max_uint16(2, (uint16_t) sfcb_ceildivide_uint32((uint32_t) (numElems*((self->ptrCbs[cbNew]).uint16NumPagesPerElem)), uint8PagesPerSector));
+	(self->ptrCbs[cbNew]).uint32StopSector = (self->ptrCbs[cbNew]).uint32StartSector+uint16NumSectors-1;
+	(self->ptrCbs[cbNew]).uint16NumEntriesMax = (uint16_t) (uint16NumSectors*uint8PagesPerSector) / (self->ptrCbs[cbNew]).uint16NumPagesPerElem;
 	(self->ptrCbs[cbNew]).uint16NumEntries = 0;
 	*cbID = cbNew;
+	/* check if stop sector is in total size */
+	if ( ((self->ptrCbs[cbNew]).uint32StopSector+1) * SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoSectorSizeByte > SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoTotalSizeByte ) {
+		sfcb_printf("  ERROR:%s flash size exceeded\n", __FUNCTION__);
+		return 2;	// Flash capacity exceeded
+	}
+	/* print slot config */
+	sfcb_printf("  INFO:%s:sfcb[%i].uint8Used             = %d\n", __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint8Used);
+	sfcb_printf("  INFO:%s:sfcb[%i].uint16NumPagesPerElem = %d\n", __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint16NumPagesPerElem);
+	sfcb_printf("  INFO:%s:sfcb[%i].uint32StartSector     = 0x%x\n", __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint32StartSector);
+	sfcb_printf("  INFO:%s:sfcb[%i].uint32StopSector      = 0x%x\n", __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint32StopSector);
+	sfcb_printf("  INFO:%s:sfcb[%i].uint16NumEntriesMax   = %d\n", __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint16NumEntriesMax);
 	/* succesfull */
 	return 0;
 }

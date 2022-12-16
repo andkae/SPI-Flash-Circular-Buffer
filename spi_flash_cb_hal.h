@@ -56,7 +56,6 @@ typedef struct t_spi_flash_cb_type_descr {
     uint32_t    uint32FlashTopoSectorSizeByte;  /**<  Flash Topo: Flash Sector Size in Byte             */
     uint32_t    uint32FlashTopoPageSizeByte;    /**<  Flash Topo: Flash Page Size in Byte               */
     uint32_t    uint32FlashTopoTotalSizeByte;   /**<  Flash Topo: Total Flash Size in Byte              */
-    uint8_t		uint8FlashTopoPagesPerSector;	/**<  Flash Topo: Number of Pages Per Sector            */
     uint8_t     uint8FlashTopoRdIdDummyByte;    /**<  Flash Topo: Number of Dummy bytes after RD ID IST */
     uint8_t     uint8FlashMngWipMsk;            /**<  Flash MNG: Write-in-progress                      */
     uint8_t     uint8FlashMngWrEnaMsk;          /**<  Flash MNG: Write enable latch, 1: set, 0: clear   */
@@ -84,7 +83,6 @@ const struct t_spi_flash_cb_type_descr SPI_FLASH_CB_TYPES[] = {
     4096,           // uint32FlashTopoSectorSizeByte    Micron_MT25QU128, p. 41,        4KB SUBSECTOR ERASE
     256,            // uint32FlashTopoPageSizeByte      Micron_MT25QU128, p. 9
     2097152,        // uint32FlashTopoTotalSizeByte     Micron_MT25QU128, p. 1
-    16,				// uint8FlashTopoPagesPerSector
     0,              // uint8FlashTopoRdIdDummyByte
     0x01,           // uint8FlashMngWipMsk              Micron_MT25QU128, p. 26
     0x02,           // uint8FlashMngWrEnaMsk            Micron_MT25QU128, p. 26
@@ -108,7 +106,6 @@ const struct t_spi_flash_cb_type_descr SPI_FLASH_CB_TYPES[] = {
     0,      // uint32FlashTopoSectorSizeByte
     0,      // uint32FlashTopoPageSizeByte
     0,      // uint32FlashTopoTotalSizeByte
-    0,		// uint8FlashTopoPagesPerSecor
     0,      // uint8FlashTopoRdIdDummyByte
     0,      // uint8FlashMngWipMsk
     0,      // uint8FlashMngWrEnaMsk
