@@ -122,8 +122,7 @@ int sfcb_new_cb (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeByte, u
 	
     /* Function call message */
 	sfcb_printf("__FUNCTION__ = %s\n", __FUNCTION__);
-	sfcb_printf("  INFO:%s:sfcb_p = %p\n", __FUNCTION__, self);	
-	sfcb_printf("  INFO:%s:ptrCb[0]_p = %p\n", __FUNCTION__, &(self->ptrCbs[0]));	
+	sfcb_printf("  INFO:%s:sfcb_p = %p\n", __FUNCTION__, self);
 	/* check for free Slot number */
 	uint32StartSector = 0;
 	for ( cbNew = 0; cbNew < (self->uint8NumCbs); cbNew++ ) {
@@ -155,11 +154,12 @@ int sfcb_new_cb (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeByte, u
 		return 2;	// Flash capacity exceeded
 	}
 	/* print slot config */
-	sfcb_printf("  INFO:%s:sfcb[%i].uint8Used             = %d\n", __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint8Used);
-	sfcb_printf("  INFO:%s:sfcb[%i].uint16NumPagesPerElem = %d\n", __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint16NumPagesPerElem);
-	sfcb_printf("  INFO:%s:sfcb[%i].uint32StartSector     = 0x%x\n", __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint32StartSector);
-	sfcb_printf("  INFO:%s:sfcb[%i].uint32StopSector      = 0x%x\n", __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint32StopSector);
-	sfcb_printf("  INFO:%s:sfcb[%i].uint16NumEntriesMax   = %d\n", __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint16NumEntriesMax);
+	sfcb_printf("  INFO:%s:ptrCbs[%i]_p                     = %p\n", __FUNCTION__, cbNew, (&self->ptrCbs[cbNew]));
+	sfcb_printf("  INFO:%s:ptrCbs[%i].uint8Used             = %d\n", __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint8Used);
+	sfcb_printf("  INFO:%s:ptrCbs[%i].uint16NumPagesPerElem = %d\n", __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint16NumPagesPerElem);
+	sfcb_printf("  INFO:%s:ptrCbs[%i].uint32StartSector     = 0x%x\n", __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint32StartSector);
+	sfcb_printf("  INFO:%s:ptrCbs[%i].uint32StopSector      = 0x%x\n", __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint32StopSector);
+	sfcb_printf("  INFO:%s:ptrCbs[%i].uint16NumEntriesMax   = %d\n", __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint16NumEntriesMax);
 	/* succesfull */
 	return 0;
 }
