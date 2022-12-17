@@ -81,6 +81,8 @@ int sfcb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8_t numCb
 	self->uint8Error = SFCB_ERO_NO;
     self->ptrCbElemPl = NULL;
 	self->uint16CbElemPlSize = 0;
+	/* memory addresses */
+	sfcb_printf("  INFO:%s:sfcb:spi_p            = %p\n", __FUNCTION__, &(self->uint8Spi));	// spi buffer
 	/* init circular buffer handles */
 	for ( uint8_t i = 0; i < (self->uint8NumCbs); i++ ) {
 		(self->ptrCbs[i]).uint8Used = 0;
@@ -89,6 +91,7 @@ int sfcb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8_t numCb
 		sfcb_printf("  INFO:%s:ptrCbs[%i].uint8Used_p = %p\n", __FUNCTION__, i, &((self->ptrCbs[i]).uint8Used));	// output address
 		sfcb_printf("  INFO:%s:ptrCbs[%i].uint8Init_p = %p\n", __FUNCTION__, i, &((self->ptrCbs[i]).uint8Init));	// output address
 	}
+	
 	/* normal end */
 	return 0;
 }
@@ -173,16 +176,18 @@ int sfcb_new_cb (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeByte, u
 void sfcb_worker (spi_flash_cb *self)
 {
 	/** Variables **/
+	spi_flash_cb_elem_head*	cbHead = (spi_flash_cb_elem_head*) &((self->uint8Spi)[4]);	// assign spi buffer to head structure, first 4 bytes are 1 byte instruction + 3 byte address
 	uint8_t					uint8Good;				// check was good
 	uint16_t				uint16PagesBytesAvail;	// number of used page bytes
 	uint16_t				uint16CpyLen;			// number of Bytes to copy
 	uint32_t				uint32Temp;				// temporaray 32bit variable
 	spi_flash_cb_elem_head	head;					// circular buffer element header
 	
-	
     /* Function call message */
 	sfcb_printf("__FUNCTION__ = %s\n", __FUNCTION__);
-	sfcb_printf("  INFO:%s:sfcb_p = %p\n", __FUNCTION__, self);
+	sfcb_printf("  INFO:%s:sfcb_p            = %p\n", __FUNCTION__, self);
+	sfcb_printf("  INFO:%s:sfcb:spi_p        = %p\n", __FUNCTION__, &(self->uint8Spi));	// spi buffer
+	sfcb_printf("  INFO:%s:sfcb:spi:cbHead_p = %p\n", __FUNCTION__, cbHead);			// spi packate casted to header
 	/* select part of FSM */
     switch (self->cmd) {
 		/* 
