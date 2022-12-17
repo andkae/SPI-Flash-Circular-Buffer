@@ -107,7 +107,12 @@ int main ()
 	print_raw_sfcb_cb(&sfcb_cb, sizeof(sfcb_cb)/sizeof(sfcb_cb[0]));
 
 
-
+	/* sfcb_worker
+	 *   services flash circular buffer layer, creates and evaluates SPI packets
+	 */
+	printf("INFO:%s:sfcb_worker\n", __FUNCTION__);
+	sfcb_worker (&sfcb);
+	
 
 
     /* gracefull end */
