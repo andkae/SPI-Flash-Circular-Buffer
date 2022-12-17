@@ -227,17 +227,17 @@ void sfcb_worker (spi_flash_cb *self)
 						/* Flash Area is used by circular buffer, check magic number 
 						 *   +4: Read instruction + 32bit address
 						 */
-						if ( ((spi_flash_cb_elem_head*) (((void*)self->uint8Spi)+4))->uint32MagicNum == ((self->ptrCbs)[self->uint8IterCb]).uint32MagicNum ) {
+						if ( cbHead->uint32MagicNum == ((self->ptrCbs)[self->uint8IterCb]).uint32MagicNum ) {
 							/* count available elements */
 							(((self->ptrCbs)[self->uint8IterCb]).uint16NumEntries)++;
 							/* get highest number of numbered circular buffer elements, needed for next entry */
-							if ( ((spi_flash_cb_elem_head*) (((void*)self->uint8Spi)+4))->uint32IdNum > ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax ) {
+							if ( cbHead->uint32IdNum > ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax ) {
 								/* save new highest number in circular buffer */
-								((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax = ((spi_flash_cb_elem_head*) (((void*)self->uint8Spi)+4))->uint32IdNum;
+								((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax = cbHead->uint32IdNum;
 							} 
 							/* get lowest number of circular buffer, needed for erase sector, and start get function */
-							if ( ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin > ((spi_flash_cb_elem_head*) (((void*)self->uint8Spi)+4))->uint32IdNum ) {
-								((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin = ((spi_flash_cb_elem_head*) (((void*)self->uint8Spi)+4))->uint32IdNum;
+							if ( ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin > cbHead->uint32IdNum ) {
+								((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin = cbHead->uint32IdNum;
 								((self->ptrCbs)[self->uint8IterCb]).uint32StartPageIdMin = self->uint32IterPage;
 							}
 						} else {
@@ -344,6 +344,7 @@ void sfcb_worker (spi_flash_cb *self)
 				default:
 					break;
 			}
+			break;
 		/* 
 		 * 
 		 * Add New Element to Circular Buffer
@@ -418,6 +419,7 @@ void sfcb_worker (spi_flash_cb *self)
 				default:
 					break;
 			}
+			break;
 		/* 
 		 * 
 		 * Get Element from circular buffer
@@ -476,6 +478,7 @@ void sfcb_worker (spi_flash_cb *self)
 				default:
 					break;
 			}
+			break;
 		
 		/* something strange happend */
 		default:
