@@ -91,7 +91,9 @@ int main ()
 	print_raw_sfcb_cb(&sfcb_cb, sizeof(sfcb_cb)/sizeof(sfcb_cb[0]));
 	
 	
-	/* sfcb_new_cb */
+	/* sfcb_new_cb 
+	 *   adds two new circular buffers to the SPI Flash
+	*/
 	printf("INFO:%s:sfcb_new_cb\n", __FUNCTION__);
 	sfcb_new_cb (&sfcb, 0x47114711, 244, 32, &uint8Temp);	// start-up counter with operation
 	sfcb_new_cb (&sfcb, 0x08150815, 12280, 16, &uint8Temp);	// error data collection 12KiB
