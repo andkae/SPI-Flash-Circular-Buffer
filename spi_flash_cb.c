@@ -77,7 +77,7 @@ int sfcb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8_t numCb
     self->uint8Busy = 0;
 	self->cmd = IDLE;	// free for request
 	self->uint8Stg = SFCB_STG_00;
-    self->ptrCbs = (spi_flash_cb_elem*) cbMem;
+    self->ptrCbs = (spi_flash_cb_elem*) cbMem;	// cast to circular buffer element
 	self->uint8Error = SFCB_ERO_NO;
     self->ptrCbElemPl = NULL;
 	self->uint16CbElemPlSize = 0;
@@ -179,6 +179,10 @@ void sfcb_worker (spi_flash_cb *self)
 	uint32_t				uint32Temp;				// temporaray 32bit variable
 	spi_flash_cb_elem_head	head;					// circular buffer element header
 	
+	
+    /* Function call message */
+	sfcb_printf("__FUNCTION__ = %s\n", __FUNCTION__);
+	sfcb_printf("  INFO:%s:sfcb_p = %p\n", __FUNCTION__, self);
 	/* select part of FSM */
     switch (self->cmd) {
 		/* 
@@ -187,6 +191,7 @@ void sfcb_worker (spi_flash_cb *self)
 		 * 
 		 */
 		case IDLE:
+			sfcb_printf("  INFO:%s:IDLE\n", __FUNCTION__);
 			return;
 		/* 
 		 * 
@@ -194,9 +199,12 @@ void sfcb_worker (spi_flash_cb *self)
 		 * 
 		 */
 		case MKCB:
+			sfcb_printf("  INFO:%s:MKCB\n", __FUNCTION__);
+			/* select excution state, allows break & cont */
 			switch (self->uint8Stg) {
 				/* check for WIP */
 				case SFCB_STG_00:
+					sfcb_printf("  INFO:%s:MKCB: check for WIP\n", __FUNCTION__);
 					if ( (0 == self->uint16SpiLen) || (0 != (self->uint8Spi[1] & SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashMngWipMsk)) ) {
 						/* First Request or WIP */
 						self->uint8Spi[0] = SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashIstRdStateReg;
@@ -214,24 +222,24 @@ void sfcb_worker (spi_flash_cb *self)
 						/* Flash Area is used by circular buffer, check magic number 
 						 *   +4: Read instruction + 32bit address
 						 */
-						if ( ((spi_flash_cb_elem_head*) (((void*)self->uint8Spi)+4))->uint32MagicNum == ((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint32MagicNum ) {
+						if ( ((spi_flash_cb_elem_head*) (((void*)self->uint8Spi)+4))->uint32MagicNum == ((self->ptrCbs)[self->uint8IterCb]).uint32MagicNum ) {
 							/* count available elements */
-							(((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint16NumEntries)++;
+							(((self->ptrCbs)[self->uint8IterCb]).uint16NumEntries)++;
 							/* get highest number of numbered circular buffer elements, needed for next entry */
-							if ( ((spi_flash_cb_elem_head*) (((void*)self->uint8Spi)+4))->uint32IdNum > ((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint32IdNumMax ) {
+							if ( ((spi_flash_cb_elem_head*) (((void*)self->uint8Spi)+4))->uint32IdNum > ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax ) {
 								/* save new highest number in circular buffer */
-								((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint32IdNumMax = ((spi_flash_cb_elem_head*) (((void*)self->uint8Spi)+4))->uint32IdNum;
+								((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax = ((spi_flash_cb_elem_head*) (((void*)self->uint8Spi)+4))->uint32IdNum;
 							} 
 							/* get lowest number of circular buffer, needed for erase sector, and start get function */
-							if ( ((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint32IdNumMin > ((spi_flash_cb_elem_head*) (((void*)self->uint8Spi)+4))->uint32IdNum ) {
-								((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint32IdNumMin = ((spi_flash_cb_elem_head*) (((void*)self->uint8Spi)+4))->uint32IdNum;
-								((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint32StartPageIdMin = self->uint32IterPage;
+							if ( ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin > ((spi_flash_cb_elem_head*) (((void*)self->uint8Spi)+4))->uint32IdNum ) {
+								((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin = ((spi_flash_cb_elem_head*) (((void*)self->uint8Spi)+4))->uint32IdNum;
+								((self->ptrCbs)[self->uint8IterCb]).uint32StartPageIdMin = self->uint32IterPage;
 							}
 						} else {
 							/* check for unused header 
 							 * first unused pages is alocated, iterate over all elements to get all IDs
 							 */
-							if ( 0 == ((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint8Init ) {
+							if ( 0 == ((self->ptrCbs)[self->uint8IterCb]).uint8Init ) {
 								uint8Good = 1;
 								for ( uint8_t i = 4; i<4+sizeof(spi_flash_cb_elem_head); i++ ) {	// 4: IST + 3 ADR Bytes
 									/* corrupted empty page found, leave as it is */
@@ -241,17 +249,17 @@ void sfcb_worker (spi_flash_cb *self)
 								}
 								/* save page number for next circular buffer entry */
 								if ( 0 != uint8Good ) {
-									((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint32StartPageWrite = self->uint32IterPage;	
-									((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint8Init = 1;	// prepared for writing next element
+									((self->ptrCbs)[self->uint8IterCb]).uint32StartPageWrite = self->uint32IterPage;	
+									((self->ptrCbs)[self->uint8IterCb]).uint8Init = 1;	// prepared for writing next element
 								}
 							}
 						}
 					}
 					/* request next header of circular buffer */
-					self->uint32IterPage = 	((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint32StartSector * 
+					self->uint32IterPage = 	((self->ptrCbs)[self->uint8IterCb]).uint32StartSector * 
 											SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoSectorSizeByte
 											+
-											((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint16NumPagesPerElem *
+											((self->ptrCbs)[self->uint8IterCb]).uint16NumPagesPerElem *
 											SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoPageSizeByte *
 											self->uint16IterElem;
 					self->uint16SpiLen = 4 + sizeof(spi_flash_cb_elem_head);	// +4: IST + 24Bit ADR			
@@ -261,19 +269,19 @@ void sfcb_worker (spi_flash_cb *self)
 					self->uint8Spi[2] = ((self->uint32IterPage >> 8) & 0xFF);
 					self->uint8Spi[3] = (self->uint32IterPage & 0xFF);			// Low Address
 					/* prepare iterator for next */
-					if ( self->uint16IterElem < ((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint16NumEntriesMax ) {
+					if ( self->uint16IterElem < ((self->ptrCbs)[self->uint8IterCb]).uint16NumEntriesMax ) {
 						/* next element in current queue */
 						(self->uint16IterElem)++;
 					} else {
 						/* Free Page Found */
-						if ( 0 != ((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint8Init) {
+						if ( 0 != ((self->ptrCbs)[self->uint8IterCb]).uint8Init) {
 							/* prepare for next queue */
 							self->uint16IterElem = 0;	// reset element counter
 							(self->uint8IterCb)++;		// process next queue
 							/* look ahead if service of some queue can skipped */
 							for ( uint8_t i=self->uint8IterCb; i<self->uint8NumCbs; i++ ) {
 								/* all active circular buffer queues processed? */
-								if ( 0 == ((spi_flash_cb_elem*) self->ptrCbs)[i].uint8Used ) {
+								if ( 0 == ((self->ptrCbs)[i]).uint8Used ) {
 									self->uint16SpiLen = 0;
 									self->cmd = IDLE;
 									self->uint8Stg = SFCB_STG_00;
@@ -281,7 +289,7 @@ void sfcb_worker (spi_flash_cb *self)
 									return;
 								/* active queue found */
 								} else {
-									if ( 0 == ((spi_flash_cb_elem*) self->ptrCbs)[i].uint8Init ) {
+									if ( 0 == ((self->ptrCbs)[i]).uint8Init ) {
 										self->uint8IterCb = i;	// search for unintializied queue, in case of only on circular buffer needes to rebuild
 										break;
 									}
@@ -379,8 +387,8 @@ void sfcb_worker (spi_flash_cb *self)
 					uint16PagesBytesAvail = SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoPageSizeByte;
 					if ( 0 == self->uint16IterElem ) {
 						memset(&head, 0, sizeof(head));	// make empty
-						head.uint32MagicNum = ((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint32MagicNum;
-						head.uint32IdNum = ((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint32IdNumMax + 1;
+						head.uint32MagicNum = ((self->ptrCbs)[self->uint8IterCb]).uint32MagicNum;
+						head.uint32IdNum = ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax + 1;
 						memcpy((self->uint8Spi+self->uint16SpiLen), &head, sizeof(head));
 						self->uint16SpiLen += sizeof(head);
 						uint16PagesBytesAvail -= sizeof(head);
@@ -508,13 +516,13 @@ int sfcb_mkcb (spi_flash_cb *self)
 		return 1;	// busy
 	}
 	/* check for at least one active queue */
-	if ( 0 == ((spi_flash_cb_elem*) self->ptrCbs)[0].uint8Used ) {
+	if ( 0 == ((self->ptrCbs)[0]).uint8Used ) {
 		return 2;	// no active queue
 	}
 	/* Find first queue which needs an build */
 	self->uint8IterCb = 0;
 	for ( uint8_t i=0; i<self->uint8NumCbs; i++ ) {
-		if ( (0 == ((spi_flash_cb_elem*) self->ptrCbs)[i].uint8Used) || (0 == ((spi_flash_cb_elem*) self->ptrCbs)[i].uint8Init) ) {
+		if ( (0 == ((self->ptrCbs)[i]).uint8Used) || (0 == ((self->ptrCbs)[i]).uint8Init) ) {
 			break;
 		}
 		self->uint8IterCb = i;	// search for unintializied queue, in case of only on circular buffer needes to rebuild
@@ -541,17 +549,17 @@ int sfcb_add (spi_flash_cb *self, uint8_t cbID, void *data, uint16_t len)
 		return 1;	// Worker is busy, wait for processing last job
 	}
 	/* check if CB is init for request */
-	if ( (0 == ((spi_flash_cb_elem*) self->ptrCbs)[cbID].uint8Used) || (0 == ((spi_flash_cb_elem*) self->ptrCbs)[cbID].uint8Init) ) {
+	if ( (0 == ((self->ptrCbs)[cbID]).uint8Used) || (0 == ((self->ptrCbs)[cbID]).uint8Init) ) {
 		return 2;	// Circular Buffer is not prepared for adding new element, run #sfcb_worker
 	}
 	/* check for match into circular buffer size */
-	if ( len > (((spi_flash_cb_elem*) self->ptrCbs)[cbID].uint16NumPagesPerElem * SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoPageSizeByte) ) {
+	if ( len > (((self->ptrCbs)[cbID]).uint16NumPagesPerElem * SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoPageSizeByte) ) {
 		return 4;	// data segement is larger then reserved circular buffer space
 	}
 	/* store information for insertion */
 	self->uint8IterCb = cbID;	// used as pointer to queue
-	((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint8Init = 0;	// mark as dirty, for next write run #sfcb_mkcb
-	self->uint32IterPage = ((spi_flash_cb_elem*) self->ptrCbs)[self->uint8IterCb].uint32StartPageWrite;	// select page to write
+	((self->ptrCbs)[self->uint8IterCb]).uint8Init = 0;	// mark as dirty, for next write run #sfcb_mkcb
+	self->uint32IterPage = ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageWrite;	// select page to write
 	self->ptrCbElemPl = data;
 	self->uint16CbElemPlSize = len;
 	self->uint16IterElem = 0;	// used as ptrCbElemPl written pointer
@@ -577,7 +585,7 @@ int sfcb_get (spi_flash_cb *self, uint8_t cbID, void *data, uint16_t len, uint16
 		return 1;	// Worker is busy, wait for processing last job
 	}
 	/* check if CB is init for request */
-	if ( (0 == ((spi_flash_cb_elem*) self->ptrCbs)[cbID].uint8Used) || (0 == ((spi_flash_cb_elem*) self->ptrCbs)[cbID].uint8Init) ) {
+	if ( (0 == ((self->ptrCbs)[cbID]).uint8Used) || (0 == ((self->ptrCbs)[cbID]).uint8Init) ) {
 		return 2;	// Circular Buffer is not prepared for adding new element, run #sfcb_worker
 	}
 	/* prepare job */
