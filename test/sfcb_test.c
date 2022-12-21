@@ -30,6 +30,7 @@
 #include <ctype.h>          // used for testing and mapping characters
 
 /** User Libs **/
+#include "spi_flash_model/spi_flash_model.h"
 #include "spi_flash_cb.h"
 
 
