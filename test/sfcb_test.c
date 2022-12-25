@@ -30,7 +30,7 @@
 #include <ctype.h>          // used for testing and mapping characters
 
 /** User Libs **/
-#include "spi_flash_model/spi_flash_model.h"
+#include "spi_flash_model/spi_flash_model.h"	// spi flash model
 #include "spi_flash_cb.h"
 
 
@@ -60,13 +60,27 @@ int print_raw_sfcb_cb (void* sfcb_cb, uint8_t num_sfcb_cb )
 int main ()
 {
     /** Variables **/
-	spi_flash_cb		sfcb;		// SPI Flash as circular buffer
-	spi_flash_cb_elem	sfcb_cb[5];	// five logical parts in SPI Flash
-	uint8_t				uint8Temp;	// help variable
+	const uint32_t		uint32SpiFlashCycleOut = 1000;		// abort calling SPI flash
+	uint32_t			uint32Counter;						// counter
+	t_sfm       		spiFlash;   						// SPI flash model
+	int					sfm_state;							// SPI Flash model return state
+	spi_flash_cb		sfcb;								// SPI Flash as circular buffer
+	spi_flash_cb_elem	sfcb_cb[5];							// five logical parts in SPI Flash
+	uint8_t				uint8Temp;							// help variable
+	uint8_t				uint8FlashData[] = {0,1,2,3,4,5};	// SPI test data
 	
 
 	/* entry message */
 	printf("INFO:%s: unit test started\n", __FUNCTION__);
+	
+	
+	/* init flash model */
+    printf("INFO:%s: Init Flash model W25Q16JV\n", __FUNCTION__);
+    if ( 0 != sfm_init( &spiFlash, "W25Q16JV" ) ) {
+        printf("ERROR:%s:sfm_init\n", __FUNCTION__);
+        goto ERO_END;
+    }
+	
 	
 	/* sfcb_init */
 	printf("INFO:%s:sfcb_init\n", __FUNCTION__);
@@ -88,31 +102,69 @@ int main ()
 			goto ERO_END;
 		}
 	}
-	/* raw dump */
-	print_raw_sfcb_cb(&sfcb_cb, sizeof(sfcb_cb)/sizeof(sfcb_cb[0]));
+	//print_raw_sfcb_cb(&sfcb_cb, sizeof(sfcb_cb)/sizeof(sfcb_cb[0]));	// raw dump
 	
 	
 	/* sfcb_new_cb 
 	 *   adds two new circular buffers to the SPI Flash
 	*/
 	printf("INFO:%s:sfcb_new_cb\n", __FUNCTION__);
-	sfcb_new_cb (&sfcb, 0x47114711, 244, 32, &uint8Temp);	// start-up counter with operation
-	sfcb_new_cb (&sfcb, 0x08150815, 12280, 16, &uint8Temp);	// error data collection 12KiB
+	sfcb_new_cb (&sfcb, 0x47114711, 244, 32, &uint8Temp);				// start-up counter with operation
+	sfcb_new_cb (&sfcb, 0x08150815, 12280, 16, &uint8Temp);				// error data collection 12KiB
+	print_raw_sfcb_cb(&sfcb_cb, sizeof(sfcb_cb)/sizeof(sfcb_cb[0]));	// raw dump of handling indo
+	
+	
+	/* sfcb_mkcb 
+	 *   access spi flash and build circular buffers
+	*/
+	printf("INFO:%s:sfcb_mkcb\n", __FUNCTION__);
+	if ( 0 != sfcb_mkcb(&sfcb) ) {
+		printf("ERROR:%s:sfcb_mkcb failed to start", __FUNCTION__);
+		goto ERO_END;
+	}
+	uint32Counter = 0;
+	while ( (0 != sfcb_busy(&sfcb)) && ((uint32Counter++) < uint32SpiFlashCycleOut) ) {
+		/* SFCB Worker */
+		sfcb_worker (&sfcb);
+		/* interact SPI Flash Model */
+		sfm_state = sfm(&spiFlash, (uint8_t*) &sfcb.uint8Spi, sfcb_spi_len(&sfcb));
+		if ( 0 != sfm_state ) {
+			printf("ERROR:%s:spi_flash_model ero=%d", __FUNCTION__, sfm_state);
+			goto ERO_END;
+		}
+	}
+	if ( uint32Counter == uint32SpiFlashCycleOut ) {
+		printf("ERROR:%s:sfcb_mkcb tiout reached", __FUNCTION__);
+		goto ERO_END;
+	}
+	sfm_dump( &spiFlash, 0, 256 );	// dump SPI flash content
 
 
+	/* SFCB add */
+	printf("INFO:%s:sfcb_add\n", __FUNCTION__);
+	if ( 0 != sfcb_add(&sfcb, 0, &uint8FlashData, sizeof(uint8FlashData)/sizeof(uint8FlashData[0])) ) {
+		printf("ERROR:%s:sfcb_add failed to start", __FUNCTION__);
+		goto ERO_END;
+	}
+	uint32Counter = 0;
+	while ( (0 != sfcb_busy(&sfcb)) && ((uint32Counter++) < uint32SpiFlashCycleOut) ) {
+		/* SFCB Worker */
+		sfcb_worker (&sfcb);
+		/* interact SPI Flash Model */
+		sfm_state = sfm(&spiFlash, (uint8_t*) &sfcb.uint8Spi, sfcb_spi_len(&sfcb));
+		if ( 0 != sfm_state ) {
+			printf("ERROR:%s:spi_flash_model ero=%d", __FUNCTION__, sfm_state);
+			goto ERO_END;
+		}
+	}
+	if ( uint32Counter == uint32SpiFlashCycleOut ) {
+		printf("ERROR:%s:sfcb_mkcb tiout reached", __FUNCTION__);
+		goto ERO_END;
+	}
+	sfm_dump( &spiFlash, 0, 256 );	// dump SPI flash content
 
 
-
-
-
-	print_raw_sfcb_cb(&sfcb_cb, sizeof(sfcb_cb)/sizeof(sfcb_cb[0]));
-
-
-	/* sfcb_worker
-	 *   services flash circular buffer layer, creates and evaluates SPI packets
-	 */
-	printf("INFO:%s:sfcb_worker\n", __FUNCTION__);
-	sfcb_worker (&sfcb);
+	
 	
 
 
