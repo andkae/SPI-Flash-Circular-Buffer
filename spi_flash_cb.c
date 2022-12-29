@@ -601,7 +601,7 @@ int sfcb_add (spi_flash_cb *self, uint8_t cbID, void *data, uint16_t len)
 
 
 /**
- *  sfcb_add
+ *  sfcb_get
  *    inserts element into circular buffer
  */
 int sfcb_get (spi_flash_cb *self, uint8_t cbID, void *data, uint16_t len, uint16_t lenMax)
