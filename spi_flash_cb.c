@@ -23,7 +23,7 @@
 #include <stddef.h>     // various variable types and macros: size_t, offsetof, NULL, ...
 #include <string.h>     // string operation: memset, memcpy
 /* Self */
-#include "spi_flash_cb_hal.h"	// supported spi flashes
+#include "sfcb_flash_types.h"	// supported spi flashes
 #include "spi_flash_cb.h"		// function prototypes
 
 

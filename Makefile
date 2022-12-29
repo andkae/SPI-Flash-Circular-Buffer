@@ -43,7 +43,7 @@ sfcb_test.o: ./test/sfcb_test.c
 	$(CC) $(CFLAGS) ./test/sfcb_test.c -o ./test/sfcb_test.o
 
 sfcb.o: ./spi_flash_cb.c
-	$(CC) $(CFLAGS) -DSFCB_PRINTF_EN  ./spi_flash_cb.c -o ./test/sfcb.o
+	$(CC) $(CFLAGS) -DSFCB_PRINTF_EN -DW25Q16JV ./spi_flash_cb.c -o ./test/sfcb.o
 	
 spi_flash_model.o: ./test/spi_flash_model/spi_flash_model.c
 	$(CC) $(CFLAGS)  ./test/spi_flash_model/spi_flash_model.c -o ./test/spi_flash_model.o
