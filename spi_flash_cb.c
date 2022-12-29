@@ -245,7 +245,7 @@ void sfcb_worker (spi_flash_cb *self)
 								((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin = cbHead->uint32IdNum;
 								((self->ptrCbs)[self->uint8IterCb]).uint32StartPageIdMin = self->uint32IterPage;
 							}
-							sfcb_printf ( "  INFO:%s:MKCB:STG1: idmin=%x, idmax=%x\n", 
+							sfcb_printf ( "  INFO:%s:MKCB:STG1: idmin=0x%x, idmax=0x%x\n", 
 										  __FUNCTION__, 
 										  ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin, 
 										  ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax
@@ -330,7 +330,7 @@ void sfcb_worker (spi_flash_cb *self)
 				/* Assemble Command for Sector ERASE */	
 				case SFCB_STG_02:
 					sfcb_printf( "  INFO:%s:MKCB:STG2: Assemble Command for Sector ERASE\n", __FUNCTION__);
-					sfcb_printf( "  INFO:%s:MKCB:STG2: cb=%d, uint32StartPageIdMin=%x\n", 
+					sfcb_printf( "  INFO:%s:MKCB:STG2: cb=%d, uint32StartPageIdMin=0x%x\n", 
 								 __FUNCTION__, 
 								 self->uint8IterCb,
 								 ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageIdMin
