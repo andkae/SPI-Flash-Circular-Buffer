@@ -42,19 +42,6 @@
 
 
 /**
- * @defgroup SFCB_CFG driver configuration
- *
- * sinu diag character interface register and offset defintion
- *
- * @{
- */
-#ifndef SFCB_SPI_BUF
-	#define SFCB_SPI_BUF	266		/**<  SPI buffer between logical, and HW layer; Page Size + some bytes for instruction  */
-#endif
-/** @} */
-
-
-/**
  * @defgroup SFCB_CMD
  *
  * States for Worker
@@ -66,7 +53,6 @@
 #define SFCB_CMD_ADD	(0x02)      /**<  Add Element into Circular Buffer */
 #define SFCB_CMD_GET	(0x03)      /**<  Get Data from Element of Circular buffer, there is no pop from the stack after get */
 #define SFCB_CMD_RAW	(0x04)		/**<  get Raw DATA from SPI flash */
-
 /** @} */
 
 
@@ -169,9 +155,10 @@ typedef struct spi_flash_cb
     uint8_t				uint8FlashPresent;		/**< checks if selected flashtype is available */
     uint8_t				uint8NumCbs;			/**< number of circular buffers */
     spi_flash_cb_elem*	ptrCbs;					/**< List with flash circular buffer management info */
-    uint8_t				uint8Spi[SFCB_SPI_BUF];	/**< transceive buffer between SPI/CB layer */
-    uint16_t			uint16SpiLen;			/**< used buffer length */
-    uint8_t				uint8Busy;				/**< Performing splitted interaction of circular buffers */
+    uint8_t*			uint8PtrSpi;			/**< SPI/CB layer interaction buffer */
+	uint16_t			uint16SpiLen;			/**< used buffer length */
+    uint16_t			uint16SpiMax;			/**< maximum spi buffer length */
+	uint8_t				uint8Busy;				/**< Performing splitted interaction of circular buffers */
     t_sfcb_cmd			cmd;					/**< Command to be executed */
     uint8_t				uint8IterCb;			/**< Iterator for splitted interaction, iterator over Circular buffers */
     uint16_t			uint16IterElem;			/**< Iterator for splitted interaction, iteartor over elements in circular buffer */
@@ -193,15 +180,15 @@ typedef struct spi_flash_cb
  *
  *  @param[in,out]  self                handle
  *  @param[in]      flashType           index of flash type in #SPI_FLASH_CB_TYPES
- *  @param[in,out]  *cbMem              pointer to allocated memory for circulat buffer list, see #spi_flash_cb_elem
- *  @param[in]      numCbs              number of maximum allowed circular buffers
+ *  @param[in,out]  *cb                 pointer to allocated memory for circulat buffer list, see #spi_flash_cb_elem
+ *  @param[in]      cbLen               number of maximum allowed circular buffers
  *  @return         int                 state
  *  @retval         0                   OKAY
  *  @retval         1                   Invalid Flash Type
  *  @since          2022-07-25
  *  @author         Andreas Kaeberlein
  */
-int sfcb_init (spi_flash_cb *self, uint8_t flashType, void *cbMem, uint8_t numCbs);
+int sfcb_init (spi_flash_cb *self, uint8_t flashType, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen);
 
 
 
