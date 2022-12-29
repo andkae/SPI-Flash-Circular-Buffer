@@ -209,7 +209,7 @@ void sfcb_worker (spi_flash_cb *self)
 			switch (self->uint8Stg) {
 				/* check for WIP */
 				case SFCB_STG_00:
-					sfcb_printf("  INFO:%s:MKCB: check for WIP\n", __FUNCTION__);
+					sfcb_printf("  INFO:%s:MKCB:STG0: check for WIP\n", __FUNCTION__);
 					if ( (0 == self->uint16SpiLen) || (0 != (self->uint8Spi[1] & SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashMngWipMsk)) ) {
 						/* First Request or WIP */
 						self->uint8Spi[0] = SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashIstRdStateReg;
@@ -222,6 +222,7 @@ void sfcb_worker (spi_flash_cb *self)
 					__attribute__ ((fallthrough));	// Go one with next
 				/* Find Page for next Circulat buffer element */
 				case SFCB_STG_01:
+					sfcb_printf("  INFO:%s:MKCB:STG1: find empty page for next element\n", __FUNCTION__);
 					/* check last response */
 					if ( 0 != self->uint16SpiLen ) {
 						/* Flash Area is used by circular buffer, check magic number 
@@ -236,10 +237,15 @@ void sfcb_worker (spi_flash_cb *self)
 								((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax = cbHead->uint32IdNum;
 							} 
 							/* get lowest number of circular buffer, needed for erase sector, and start get function */
-							if ( ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin > cbHead->uint32IdNum ) {
+							if ( cbHead->uint32IdNum < ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin ) {
 								((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin = cbHead->uint32IdNum;
 								((self->ptrCbs)[self->uint8IterCb]).uint32StartPageIdMin = self->uint32IterPage;
 							}
+							sfcb_printf ( "  INFO:%s:MKCB:STG1: idmin=%x, idmax=%x\n", 
+										  __FUNCTION__, 
+										  ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin, 
+										  ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax
+										);
 						} else {
 							/* check for unused header 
 							 * first unused pages is alocated, iterate over all elements to get all IDs
@@ -534,6 +540,18 @@ int sfcb_mkcb (spi_flash_cb *self)
 			break;
 		}
 		self->uint8IterCb = i;	// search for unintializied queue, in case of only on circular buffer needes to rebuild
+	}
+	/* reset idmin/idmax counter to enable select of correct page to erase */
+	for ( uint8_t i = 0; i < (self->uint8NumCbs); i++ ) {
+		/* not used, leave */
+		if ( 0 == ((self->ptrCbs)[i]).uint8Used ) {
+			break;
+		}
+		/* dirty buffer, needs to rebuild absoulte idmin/idmax for next write, otherwise will the last written element deleted */
+		if ( 0 == ((self->ptrCbs)[self->uint8IterCb]).uint8Init ) {	
+			(self->ptrCbs[i]).uint32IdNumMax = 0;				// in case of uninitialized memory
+			(self->ptrCbs[i]).uint32IdNumMin = (uint32_t) (~0);	// assign highest number
+		}
 	}
 	/* Setup new Job */
 	self->cmd = MKCB;
