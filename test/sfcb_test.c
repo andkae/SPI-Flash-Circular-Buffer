@@ -141,30 +141,62 @@ int main ()
 
 
 	/* SFCB add */
-	printf("INFO:%s:sfcb_add\n", __FUNCTION__);
-	if ( 0 != sfcb_add(&sfcb, 0, &uint8FlashData, sizeof(uint8FlashData)/sizeof(uint8FlashData[0])) ) {
-		printf("ERROR:%s:sfcb_add failed to start", __FUNCTION__);
-		goto ERO_END;
-	}
-	uint32Counter = 0;
-	while ( (0 != sfcb_busy(&sfcb)) && ((uint32Counter++) < uint32SpiFlashCycleOut) ) {
-		/* SFCB Worker */
-		sfcb_worker (&sfcb);
-		/* interact SPI Flash Model */
-		sfm_state = sfm(&spiFlash, (uint8_t*) &sfcb.uint8Spi, sfcb_spi_len(&sfcb));
-		if ( 0 != sfm_state ) {
-			printf("ERROR:%s:spi_flash_model ero=%d", __FUNCTION__, sfm_state);
+	for ( uint8_t i = 0; i < 63; i++ ) {
+		printf("INFO:%s:sfcb_add:i=%d\n", __FUNCTION__, i);
+		/* add element */
+		if ( 0 != sfcb_add(&sfcb, 0, &uint8FlashData, sizeof(uint8FlashData)/sizeof(uint8FlashData[0])) ) {
+			printf("ERROR:%s:sfcb_add failed to start", __FUNCTION__);
+			goto ERO_END;
+		}
+		uint32Counter = 0;
+		while ( (0 != sfcb_busy(&sfcb)) && ((uint32Counter++) < uint32SpiFlashCycleOut) ) {
+			/* SFCB Worker */
+			sfcb_worker (&sfcb);
+			/* interact SPI Flash Model */
+			sfm_state = sfm(&spiFlash, (uint8_t*) &sfcb.uint8Spi, sfcb_spi_len(&sfcb));
+			if ( 0 != sfm_state ) {
+				printf("ERROR:%s:spi_flash_model ero=%d", __FUNCTION__, sfm_state);
+				goto ERO_END;
+			}
+		}
+		if ( uint32Counter == uint32SpiFlashCycleOut ) {
+			printf("ERROR:%s:sfcb_mkcb tiout reached", __FUNCTION__);
+			goto ERO_END;
+		}
+		/* rebuild circular buffer, prepare for next add */
+		if ( 0 != sfcb_mkcb(&sfcb) ) {
+			printf("ERROR:%s:sfcb_mkcb failed to start", __FUNCTION__);
+			goto ERO_END;
+		}
+		uint32Counter = 0;
+		while ( (0 != sfcb_busy(&sfcb)) && ((uint32Counter++) < uint32SpiFlashCycleOut) ) {
+			/* SFCB Worker */
+			sfcb_worker (&sfcb);
+			/* interact SPI Flash Model */
+			sfm_state = sfm(&spiFlash, (uint8_t*) &sfcb.uint8Spi, sfcb_spi_len(&sfcb));
+			if ( 0 != sfm_state ) {
+				printf("ERROR:%s:spi_flash_model ero=%d", __FUNCTION__, sfm_state);
+				goto ERO_END;
+			}
+		}
+		if ( uint32Counter == uint32SpiFlashCycleOut ) {
+			printf("ERROR:%s:sfcb_mkcb tiout reached", __FUNCTION__);
 			goto ERO_END;
 		}
 	}
-	if ( uint32Counter == uint32SpiFlashCycleOut ) {
-		printf("ERROR:%s:sfcb_mkcb tiout reached", __FUNCTION__);
-		goto ERO_END;
-	}
+	if ( 0 != sfm_cmp(&spiFlash, "./test/sfcb_flash_q0_i63.dif") ) {
+        printf("ERROR:%s:sfm_cmp:q0 Mismatch\n", __FUNCTION__);
+        goto ERO_END;
+    }
 	sfm_dump( &spiFlash, 0, 256 );	// dump SPI flash content
-
-
 	
+	
+	
+	
+	
+	
+	
+	//sfm_store(&spiFlash, "./flash.dif");	// write to file
 	
 
 
