@@ -151,7 +151,6 @@ typedef struct spi_flash_cb_elem
  */
 typedef struct spi_flash_cb
 {
-    uint8_t				uint8FlashType;			/**< pointer to flashtype. see #t_spi_flash_cb_type_descr */
     uint8_t				uint8FlashPresent;		/**< checks if selected flashtype is available */
     uint8_t				uint8NumCbs;			/**< number of circular buffers */
     spi_flash_cb_elem*	ptrCbs;					/**< List with flash circular buffer management info */
@@ -179,16 +178,17 @@ typedef struct spi_flash_cb
  *  initializes flash circular buffer
  *
  *  @param[in,out]  self                handle
- *  @param[in]      flashType           index of flash type in #SPI_FLASH_CB_TYPES
  *  @param[in,out]  *cb                 pointer to allocated memory for circulat buffer list, see #spi_flash_cb_elem
  *  @param[in]      cbLen               number of maximum allowed circular buffers
+ *  @param[in,out]  *spi                pointer to uint8_t spi interaction buffer, buffer betwween spi core and flash driver
+ *  @param[in]      spiLen              maimum number of elements in buffer => size in byte
  *  @return         int                 state
  *  @retval         0                   OKAY
  *  @retval         1                   Invalid Flash Type
  *  @since          2022-07-25
  *  @author         Andreas Kaeberlein
  */
-int sfcb_init (spi_flash_cb *self, uint8_t flashType, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen);
+int sfcb_init (spi_flash_cb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen);
 
 
 

@@ -61,7 +61,7 @@ static uint16_t sfcb_max_uint16(uint16_t val1, uint16_t val2)
  *  sfcb_init
  *    initializes handle
  */
-int sfcb_init (spi_flash_cb *self, uint8_t flashType, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen)
+int sfcb_init (spi_flash_cb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen)
 {
     /* Function call message */
 	sfcb_printf("__FUNCTION__ = %s\n", __FUNCTION__);
@@ -72,7 +72,6 @@ int sfcb_init (spi_flash_cb *self, uint8_t flashType, void *cb, uint8_t cbLen, v
 	}		
 	sfcb_printf("  INFO:%s: flash '%s' selected\n", __FUNCTION__, SFCB_FLASH_NAME);
     /* set up list of flash circular buffers */
-    self->uint8FlashType = flashType;
     self->uint8FlashPresent = 0;	// not flash found
     self->uint8NumCbs = cbLen;
     self->uint16SpiLen = 0;
