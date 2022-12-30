@@ -66,9 +66,11 @@ int sfcb_init (spi_flash_cb *self, uint8_t flashType, void *cb, uint8_t cbLen, v
     /* Function call message */
 	sfcb_printf("__FUNCTION__ = %s\n", __FUNCTION__);
 	/* check if provided flash type is valid */
-    if ( flashType > ((sizeof(SPI_FLASH_CB_TYPES)/sizeof(SPI_FLASH_CB_TYPES[0]))-1) ) {
-		return 1;
-	}
+    if ( 0 == (sizeof(SFCB_FLASH_NAME) - 1) ) {
+		sfcb_printf("  ERROR:%s: no flash type selected\n", __FUNCTION__);
+		return 1;	// no flash type selected, use proper compile switch
+	}		
+	sfcb_printf("  INFO:%s: flash '%s' selected\n", __FUNCTION__, SFCB_FLASH_NAME);
     /* set up list of flash circular buffers */
     self->uint8FlashType = flashType;
     self->uint8FlashPresent = 0;	// not flash found
@@ -86,7 +88,10 @@ int sfcb_init (spi_flash_cb *self, uint8_t flashType, void *cb, uint8_t cbLen, v
 	/* memory addresses */
 	sfcb_printf("  INFO:%s:sfcb:spi_p            = %p\n", __FUNCTION__, self->uint8PtrSpi);	// spi buffer
 	/* SPI buffer needs at least space for one page and address and instruction */
-	
+	if ( (SFCB_FLASH_TOPO_PAGE_SIZE + SFCB_FLASH_TOPO_ADR_BYTE + 1) > self->uint16SpiMax ) {
+		sfcb_printf("  ERROR:%s: spi buffer to small, is=%d byte, req=%d byte\n", __FUNCTION__, self->uint16SpiMax, SFCB_FLASH_TOPO_PAGE_SIZE + SFCB_FLASH_TOPO_ADR_BYTE + 1);
+		return 2;	// not enough SPI buffer to write at least one complete page to flash
+	}
 	/* init circular buffer handles */
 	for ( uint8_t i = 0; i < (self->uint8NumCbs); i++ ) {
 		(self->ptrCbs[i]).uint8Used = 0;
@@ -95,7 +100,6 @@ int sfcb_init (spi_flash_cb *self, uint8_t flashType, void *cb, uint8_t cbLen, v
 		sfcb_printf("  INFO:%s:ptrCbs[%i].uint8Used_p = %p\n", __FUNCTION__, i, &((self->ptrCbs[i]).uint8Used));	// output address
 		sfcb_printf("  INFO:%s:ptrCbs[%i].uint8Init_p = %p\n", __FUNCTION__, i, &((self->ptrCbs[i]).uint8Init));	// output address
 	}
-	
 	/* normal end */
 	return 0;
 }
@@ -106,9 +110,9 @@ int sfcb_init (spi_flash_cb *self, uint8_t flashType, void *cb, uint8_t cbLen, v
  *  sfcb_flash_size
  *    total flashsize
  */
-uint32_t sfcb_flash_size (spi_flash_cb *self)
+uint32_t sfcb_flash_size (void)
 {
-	return SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoTotalSizeByte;
+	return (uint32_t) SFCB_FLASH_TOPO_FLASH_SIZE;
 }
 
 
@@ -120,7 +124,7 @@ uint32_t sfcb_flash_size (spi_flash_cb *self)
 int sfcb_new_cb (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_t numElems, uint8_t *cbID)
 {	
 	/** help variables **/
-	const uint8_t	uint8PagesPerSector = (uint8_t) (SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoSectorSizeByte / SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoPageSizeByte);
+	const uint8_t	uint8PagesPerSector = (uint8_t) (SFCB_FLASH_TOPO_SECTOR_SIZE / SFCB_FLASH_TOPO_PAGE_SIZE);
 	const uint16_t	elemTotalSize = (uint16_t) (elemSizeByte + sizeof(spi_flash_cb_elem_head));	// payload size + header size
 	uint8_t			cbNew;				// queue of circular buffer new entry number
 	uint32_t		uint32StartSector;
@@ -148,7 +152,7 @@ int sfcb_new_cb (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeByte, u
 	(self->ptrCbs[cbNew]).uint32IdNumMax = 0;	// in case of uninitialized memory
 	(self->ptrCbs[cbNew]).uint32IdNumMin = (uint32_t) (~0);	// assign highest number
 	(self->ptrCbs[cbNew]).uint32MagicNum = magicNum;	// used magic number for the circular buffer
-	(self->ptrCbs[cbNew]).uint16NumPagesPerElem = (uint16_t) sfcb_ceildivide_uint32(elemTotalSize, SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoPageSizeByte);	// calculate in multiple of pages
+	(self->ptrCbs[cbNew]).uint16NumPagesPerElem = (uint16_t) sfcb_ceildivide_uint32(elemTotalSize, SFCB_FLASH_TOPO_PAGE_SIZE);	// calculate in multiple of pages
 	(self->ptrCbs[cbNew]).uint32StartSector = uint32StartSector;
 	uint16NumSectors = sfcb_max_uint16(2, (uint16_t) sfcb_ceildivide_uint32((uint32_t) (numElems*((self->ptrCbs[cbNew]).uint16NumPagesPerElem)), uint8PagesPerSector));
 	(self->ptrCbs[cbNew]).uint32StopSector = (self->ptrCbs[cbNew]).uint32StartSector+uint16NumSectors-1;
@@ -156,17 +160,17 @@ int sfcb_new_cb (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeByte, u
 	(self->ptrCbs[cbNew]).uint16NumEntries = 0;
 	*cbID = cbNew;
 	/* check if stop sector is in total size */
-	if ( ((self->ptrCbs[cbNew]).uint32StopSector+1) * SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoSectorSizeByte > SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoTotalSizeByte ) {
+	if ( ((self->ptrCbs[cbNew]).uint32StopSector+1) * SFCB_FLASH_TOPO_SECTOR_SIZE > SFCB_FLASH_TOPO_FLASH_SIZE ) {
 		sfcb_printf("  ERROR:%s flash size exceeded\n", __FUNCTION__);
 		return 2;	// Flash capacity exceeded
 	}
 	/* print slot config */
-	sfcb_printf("  INFO:%s:ptrCbs[%i]_p                     = %p\n", __FUNCTION__, cbNew, (&self->ptrCbs[cbNew]));
-	sfcb_printf("  INFO:%s:ptrCbs[%i].uint8Used             = %d\n", __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint8Used);
-	sfcb_printf("  INFO:%s:ptrCbs[%i].uint16NumPagesPerElem = %d\n", __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint16NumPagesPerElem);
+	sfcb_printf("  INFO:%s:ptrCbs[%i]_p                     = %p\n",   __FUNCTION__, cbNew, (&self->ptrCbs[cbNew]));
+	sfcb_printf("  INFO:%s:ptrCbs[%i].uint8Used             = %d\n",   __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint8Used);
+	sfcb_printf("  INFO:%s:ptrCbs[%i].uint16NumPagesPerElem = %d\n",   __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint16NumPagesPerElem);
 	sfcb_printf("  INFO:%s:ptrCbs[%i].uint32StartSector     = 0x%x\n", __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint32StartSector);
 	sfcb_printf("  INFO:%s:ptrCbs[%i].uint32StopSector      = 0x%x\n", __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint32StopSector);
-	sfcb_printf("  INFO:%s:ptrCbs[%i].uint16NumEntriesMax   = %d\n", __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint16NumEntriesMax);
+	sfcb_printf("  INFO:%s:ptrCbs[%i].uint16NumEntriesMax   = %d\n",   __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint16NumEntriesMax);
 	/* succesfull */
 	return 0;
 }
@@ -180,7 +184,7 @@ int sfcb_new_cb (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeByte, u
 void sfcb_worker (spi_flash_cb *self)
 {
 	/** Variables **/
-	spi_flash_cb_elem_head*	cbHead = (spi_flash_cb_elem_head*) (self->uint8PtrSpi+4);	// assign spi buffer to head structure, first 4 bytes are 1 byte instruction + 3 byte address
+	spi_flash_cb_elem_head*	cbHead = (spi_flash_cb_elem_head*) (self->uint8PtrSpi+SFCB_FLASH_TOPO_ADR_BYTE+1);	// assign spi buffer to head structure, +: 1 byte instruction + address bytes
 	uint8_t					uint8Good;				// check was good
 	uint16_t				uint16PagesBytesAvail;	// number of used page bytes
 	uint16_t				uint16CpyLen;			// number of Bytes to copy
@@ -214,9 +218,9 @@ void sfcb_worker (spi_flash_cb *self)
 				/* check for WIP */
 				case SFCB_STG_00:
 					sfcb_printf("  INFO:%s:MKCB:STG0: check for WIP\n", __FUNCTION__);
-					if ( (0 == self->uint16SpiLen) || (0 != (self->uint8PtrSpi[1] & SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashMngWipMsk)) ) {
+					if ( (0 == self->uint16SpiLen) || (0 != (self->uint8PtrSpi[1] & SFCB_FLASH_MNG_WIP_MSK)) ) {
 						/* First Request or WIP */
-						self->uint8PtrSpi[0] = SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashIstRdStateReg;
+						self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_STATE_REG;
 						self->uint8PtrSpi[1] = 0;
 						self->uint16SpiLen = 2;
 						return;
@@ -256,7 +260,7 @@ void sfcb_worker (spi_flash_cb *self)
 							 */
 							if ( 0 == ((self->ptrCbs)[self->uint8IterCb]).uint8Init ) {
 								uint8Good = 1;
-								for ( uint8_t i = 4; i<4+sizeof(spi_flash_cb_elem_head); i++ ) {	// 4: IST + 3 ADR Bytes
+								for ( uint8_t i = SFCB_FLASH_TOPO_ADR_BYTE + 1; i < SFCB_FLASH_TOPO_ADR_BYTE + 1 + sizeof(spi_flash_cb_elem_head); i++ ) {	// +1: IST
 									/* corrupted empty page found, leave as it is */
 									if ( 0xFF != self->uint8PtrSpi[i] ) {
 										uint8Good = 0;	// try to find next free clean page
@@ -271,15 +275,14 @@ void sfcb_worker (spi_flash_cb *self)
 						}
 					}
 					/* request next header of circular buffer */
-					self->uint32IterPage = 	((self->ptrCbs)[self->uint8IterCb]).uint32StartSector * 
-											SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoSectorSizeByte
+					self->uint32IterPage = 	((self->ptrCbs)[self->uint8IterCb]).uint32StartSector * (uint32_t) SFCB_FLASH_TOPO_SECTOR_SIZE
 											+
 											((self->ptrCbs)[self->uint8IterCb]).uint16NumPagesPerElem *
-											SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoPageSizeByte *
+											(uint32_t) SFCB_FLASH_TOPO_PAGE_SIZE *
 											self->uint16IterElem;
-					self->uint16SpiLen = 4 + sizeof(spi_flash_cb_elem_head);	// +4: IST + 24Bit ADR			
+					self->uint16SpiLen = SFCB_FLASH_TOPO_ADR_BYTE + 1 + sizeof(spi_flash_cb_elem_head);	// +1: IST, + Address bytes		
 					memset(self->uint8PtrSpi, 0, self->uint16SpiLen);
-					self->uint8PtrSpi[0] = SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashIstRdData;
+					self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_DATA;
 					self->uint8PtrSpi[1] = ((self->uint32IterPage >> 16) & 0xFF);	// High Address
 					self->uint8PtrSpi[2] = ((self->uint32IterPage >> 8) & 0xFF);
 					self->uint8PtrSpi[3] = (self->uint32IterPage & 0xFF);			// Low Address
@@ -320,7 +323,7 @@ void sfcb_worker (spi_flash_cb *self)
 							}
 						/* Go on with sector erase */
 						} else {
-							self->uint8PtrSpi[0] = SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashIstWrEnable;	// enable write
+							self->uint8PtrSpi[0] = SFCB_FLASH_IST_WR_ENA;	// enable write
 							self->uint16SpiLen = 1;
 							self->uint8Stg = SFCB_STG_02;
 						}
@@ -335,13 +338,13 @@ void sfcb_worker (spi_flash_cb *self)
 								 self->uint8IterCb,
 								 ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageIdMin
 							    );
-					uint32Temp = (self->ptrCbs[self->uint8IterCb]).uint32StartPageIdMin;	// get startpage of oldest entry, prepare for delete
-					uint32Temp = (uint32Temp & ~(SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoSectorSizeByte - 1));	// align to sub sector address
-					self->uint8PtrSpi[0] = SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashIstEraseSector;
+					uint32Temp = (self->ptrCbs[self->uint8IterCb]).uint32StartPageIdMin;		// get startpage of oldest entry, prepare for delete
+					uint32Temp = (uint32Temp & (uint32_t) ~(SFCB_FLASH_TOPO_SECTOR_SIZE - 1));	// align to sub sector address
+					self->uint8PtrSpi[0] = SFCB_FLASH_IST_ERASE_SECTOR;
 					self->uint8PtrSpi[1] = ((uint32Temp >> 16) & 0xFF);	// High Address
 					self->uint8PtrSpi[2] = ((uint32Temp >> 8) & 0xFF);
 					self->uint8PtrSpi[3] = (uint32Temp & 0xFF);			// Low Address
-					self->uint16SpiLen = 4;
+					self->uint16SpiLen = SFCB_FLASH_TOPO_ADR_BYTE + 1;	// address + instruction
 					self->uint8Stg = SFCB_STG_03;
 					return;	// DONE or SPI transfer is required
 					break;
@@ -350,7 +353,7 @@ void sfcb_worker (spi_flash_cb *self)
 					/* Start at zero Element with search for free page */
 					self->uint16IterElem = 0;
 					/* Assemble command for WIP */
-					self->uint8PtrSpi[0] = SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashIstRdStateReg;
+					self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_STATE_REG;
 					self->uint8PtrSpi[1] = 0;
 					self->uint16SpiLen = 2;
 					self->uint8Stg = SFCB_STG_00;	// wait for erase, and search for free page for next element
@@ -370,9 +373,9 @@ void sfcb_worker (spi_flash_cb *self)
 			switch (self->uint8Stg) {
 				/* check for WIP */
 				case SFCB_STG_00:
-					if ( (0 == self->uint16SpiLen) || (0 != (self->uint8PtrSpi[1] & SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashMngWipMsk)) ) {
+					if ( (0 == self->uint16SpiLen) || (0 != (self->uint8PtrSpi[1] & SFCB_FLASH_MNG_WIP_MSK)) ) {
 						/* First Request or WIP */
-						self->uint8PtrSpi[0] = SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashIstRdStateReg;
+						self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_STATE_REG;
 						self->uint8PtrSpi[1] = 0;
 						self->uint16SpiLen = 2;
 						return;
@@ -384,7 +387,7 @@ void sfcb_worker (spi_flash_cb *self)
 					/* Page Requested to program */
 					if ( self->uint16IterElem < self->uint16CbElemPlSize ) {
 						/* enable WRITE Latch */
-						self->uint8PtrSpi[0] = SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashIstWrEnable;	// uint8FlashIstWrEnable
+						self->uint8PtrSpi[0] = SFCB_FLASH_IST_WR_ENA;	// uint8FlashIstWrEnable
 						self->uint16SpiLen = 1;
 						self->uint8Stg = SFCB_STG_02;	// Page Write as next
 						return;
@@ -400,31 +403,31 @@ void sfcb_worker (spi_flash_cb *self)
 				/* Page Write to Circular Buffer */
 				case SFCB_STG_02:
 					/* assemble Flash Instruction packet */
-					self->uint8PtrSpi[0] = SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashIstWrPage;	// write page
+					self->uint8PtrSpi[0] = SFCB_FLASH_IST_WR_PAGE;	// write page
 					self->uint8PtrSpi[1] = ((self->uint32IterPage >> 16) & 0xFF);	// High Address
 					self->uint8PtrSpi[2] = ((self->uint32IterPage >> 8) & 0xFF);
 					self->uint8PtrSpi[3] = (self->uint32IterPage & 0xFF);			// Low Address
-					self->uint16SpiLen = 4;
+					self->uint16SpiLen = SFCB_FLASH_TOPO_ADR_BYTE + 1;	// +1: IST
 					/* on first packet add header */
-					uint16PagesBytesAvail = SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoPageSizeByte;
+					uint16PagesBytesAvail = SFCB_FLASH_TOPO_PAGE_SIZE;
 					if ( 0 == self->uint16IterElem ) {
 						memset(&head, 0, sizeof(head));	// make empty
 						head.uint32MagicNum = ((self->ptrCbs)[self->uint8IterCb]).uint32MagicNum;
 						head.uint32IdNum = ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax + 1;
 						memcpy((self->uint8PtrSpi+self->uint16SpiLen), &head, sizeof(head));
-						self->uint16SpiLen += sizeof(head);
-						uint16PagesBytesAvail -= sizeof(head);
+						self->uint16SpiLen = (uint16_t) (self->uint16SpiLen + sizeof(head));
+						uint16PagesBytesAvail = (uint16_t) (uint16PagesBytesAvail - sizeof(head));
 					}
 					/* determine number of bytes to copy */
 					if ( self->uint16CbElemPlSize - self->uint16IterElem > uint16PagesBytesAvail ) {
 						uint16CpyLen = uint16PagesBytesAvail;
 					} else {
-						uint16CpyLen = self->uint16CbElemPlSize - self->uint16IterElem;
+						uint16CpyLen = (uint16_t) (self->uint16CbElemPlSize - self->uint16IterElem);
 					}
 					/* assemble packet */
 					memcpy((self->uint8PtrSpi+self->uint16SpiLen), (self->ptrCbElemPl+self->uint16IterElem), uint16CpyLen);
-					self->uint16SpiLen += uint16CpyLen;
-					self->uint16IterElem += uint16CpyLen;
+					self->uint16SpiLen = (uint16_t) (self->uint16SpiLen + uint16CpyLen);
+					self->uint16IterElem = (uint16_t) (self->uint16IterElem + uint16CpyLen);
 					/* increment iterators */
 					(self->uint32IterPage)++;
 					/* Go to wait WIP */
@@ -452,9 +455,9 @@ void sfcb_worker (spi_flash_cb *self)
 			switch (self->uint8Stg) {
 				/* check for WIP */
 				case SFCB_STG_00:
-					if ( (0 == self->uint16SpiLen) || (0 != (self->uint8PtrSpi[1] & SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashMngWipMsk)) ) {
+					if ( (0 == self->uint16SpiLen) || (0 != (self->uint8PtrSpi[1] & SFCB_FLASH_MNG_WIP_MSK)) ) {
 						/* First Request or WIP */
-						self->uint8PtrSpi[0] = SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashIstRdStateReg;
+						self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_STATE_REG;
 						self->uint8PtrSpi[1] = 0;
 						self->uint16SpiLen = 2;
 						return;
@@ -465,17 +468,17 @@ void sfcb_worker (spi_flash_cb *self)
 				/* Prepare raw read*/
 				case SFCB_STG_01:
 					/* check for enough spi buf */
-					if ( self->uint16SpiMax < (self->uint16CbElemPlSize + 4) ) {	// +4: caused by read instruction
+					if ( self->uint16SpiMax < (self->uint16CbElemPlSize + SFCB_FLASH_TOPO_ADR_BYTE + 1) ) {	// IST (+1) + ADR_BYTE: caused by read instruction
 						self->uint8Busy = 0;
 						self->cmd = IDLE;	// go in idle
 						self->uint8Stg = SFCB_STG_00;
 						//self->error = SPI_BUF_SIZE;	// requested operation ends with an error
 					}
 					/* SPI package is zero */
-					self->uint16SpiLen = self->uint16CbElemPlSize + 4;	// +4 for instruction
+					self->uint16SpiLen = (uint16_t) (self->uint16CbElemPlSize + SFCB_FLASH_TOPO_ADR_BYTE + 1);	// +1: for instruction
 					memset(self->uint8PtrSpi, 0, self->uint16SpiLen);	// written data is zero
 					/* Flash instrcution */
-					self->uint8PtrSpi[0] = SPI_FLASH_CB_TYPES[self->uint8FlashType].uint8FlashIstRdData;	// write page
+					self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_DATA;	// read data
 					self->uint8PtrSpi[1] = ((self->uint32IterPage >> 16) & 0xFF);	// High Address
 					self->uint8PtrSpi[2] = ((self->uint32IterPage >> 8) & 0xFF);
 					self->uint8PtrSpi[3] = (self->uint32IterPage & 0xFF);			// Low Address
@@ -484,7 +487,7 @@ void sfcb_worker (spi_flash_cb *self)
 					return;
 				/* copy data from SPI back */
 				case SFCB_STG_02:
-					memcpy(self->ptrCbElemPl, self->uint8PtrSpi+4, self->uint16CbElemPlSize);
+					memcpy(self->ptrCbElemPl, self->uint8PtrSpi+SFCB_FLASH_TOPO_ADR_BYTE+1, self->uint16CbElemPlSize);	// skip header from answer of read instruction
 					self->uint16SpiLen = 0;
 					self->cmd = IDLE;
 					self->uint8Stg = SFCB_STG_00;
@@ -589,7 +592,7 @@ int sfcb_add (spi_flash_cb *self, uint8_t cbID, void *data, uint16_t len)
 		return 2;	// Circular Buffer is not prepared for adding new element, run #sfcb_worker
 	}
 	/* check for match into circular buffer size */
-	if ( len > (((self->ptrCbs)[cbID]).uint16NumPagesPerElem * SPI_FLASH_CB_TYPES[self->uint8FlashType].uint32FlashTopoPageSizeByte) ) {
+	if ( len > (((self->ptrCbs)[cbID]).uint16NumPagesPerElem * SFCB_FLASH_TOPO_PAGE_SIZE) ) {
 		return 4;	// data segement is larger then reserved circular buffer space
 	}
 	/* store information for insertion */
