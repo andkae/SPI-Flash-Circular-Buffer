@@ -28,10 +28,14 @@
 
 
 
-/**
- *  spi_flash_cb_ceildivide2
- *    divides to the power 2
- *    round always up
+/** @brief ceildivide
+ *
+ *  dividing with always rounding up
+ *
+ *  @param[in]      dividend        input to be divided
+ *  @param[in]      divisor         divider of input
+ *  @return         uint32_t        rounded up quotient
+ *
  */
 static uint32_t sfcb_ceildivide_uint32(uint32_t dividend, uint32_t divisor)
 {   
@@ -43,9 +47,14 @@ static uint32_t sfcb_ceildivide_uint32(uint32_t dividend, uint32_t divisor)
 
 
 
-/**
- *  spi_flash_cb_max
- *    get maximum of number
+/** @brief max
+ *
+ *  compare and retun bigger number
+ *
+ *  @param[in]      val1            comparison value 1
+ *  @param[in]      val2            comparison value 2
+ *  @return         uint16_t        bigger number of both inputs
+ *
  */
 static uint16_t sfcb_max_uint16(uint16_t val1, uint16_t val2)
 {
@@ -53,6 +62,27 @@ static uint16_t sfcb_max_uint16(uint16_t val1, uint16_t val2)
 		return val1;
 	}
     return val2;
+}
+
+
+
+/** @brief address translation
+ *
+ *  converts 32bit SPI Flash address to SPI packet convenient byte sequence 
+ *
+ *  @param[in]      adr             Flash address
+ *  @param[in,out]  *spi            SPI buffer, takes converted address place
+ *  @param[in]      adrBytes        Number of bytes for address
+ *  @return         void
+ *
+ */
+static inline void sfcb_adr32_uint8(uint32_t adr, uint8_t *spi, uint8_t adrBytes)
+{
+	/* on highest index is lowest byte placed */
+	for ( int8_t i = (int8_t) (adrBytes-1); i >= 0; i-- ) {
+		spi[i] = (uint8_t) (adr & 0xFF);	// get lowest byte
+		adr = adr >> 8;	// shift one byte right
+	}
 }
 
 
@@ -282,9 +312,7 @@ void sfcb_worker (spi_flash_cb *self)
 					self->uint16SpiLen = SFCB_FLASH_TOPO_ADR_BYTE + 1 + sizeof(spi_flash_cb_elem_head);	// +1: IST, + Address bytes		
 					memset(self->uint8PtrSpi, 0, self->uint16SpiLen);
 					self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_DATA;
-					self->uint8PtrSpi[1] = ((self->uint32IterPage >> 16) & 0xFF);	// High Address
-					self->uint8PtrSpi[2] = ((self->uint32IterPage >> 8) & 0xFF);
-					self->uint8PtrSpi[3] = (self->uint32IterPage & 0xFF);			// Low Address
+					sfcb_adr32_uint8(self->uint32IterPage, self->uint8PtrSpi+1, SFCB_FLASH_TOPO_ADR_BYTE);	// +1 first byte is instruction
 					/* prepare iterator for next */
 					if ( self->uint16IterElem < ((self->ptrCbs)[self->uint8IterCb]).uint16NumEntriesMax ) {
 						/* next element in current queue */
@@ -340,9 +368,7 @@ void sfcb_worker (spi_flash_cb *self)
 					uint32Temp = (self->ptrCbs[self->uint8IterCb]).uint32StartPageIdMin;		// get startpage of oldest entry, prepare for delete
 					uint32Temp = (uint32Temp & (uint32_t) ~(SFCB_FLASH_TOPO_SECTOR_SIZE - 1));	// align to sub sector address
 					self->uint8PtrSpi[0] = SFCB_FLASH_IST_ERASE_SECTOR;
-					self->uint8PtrSpi[1] = ((uint32Temp >> 16) & 0xFF);	// High Address
-					self->uint8PtrSpi[2] = ((uint32Temp >> 8) & 0xFF);
-					self->uint8PtrSpi[3] = (uint32Temp & 0xFF);			// Low Address
+					sfcb_adr32_uint8(uint32Temp, self->uint8PtrSpi+1, SFCB_FLASH_TOPO_ADR_BYTE);	// +1 first byte is instruction
 					self->uint16SpiLen = SFCB_FLASH_TOPO_ADR_BYTE + 1;	// address + instruction
 					self->uint8Stg = SFCB_STG_03;
 					return;	// DONE or SPI transfer is required
@@ -403,9 +429,7 @@ void sfcb_worker (spi_flash_cb *self)
 				case SFCB_STG_02:
 					/* assemble Flash Instruction packet */
 					self->uint8PtrSpi[0] = SFCB_FLASH_IST_WR_PAGE;	// write page
-					self->uint8PtrSpi[1] = ((self->uint32IterPage >> 16) & 0xFF);	// High Address
-					self->uint8PtrSpi[2] = ((self->uint32IterPage >> 8) & 0xFF);
-					self->uint8PtrSpi[3] = (self->uint32IterPage & 0xFF);			// Low Address
+					sfcb_adr32_uint8(self->uint32IterPage, self->uint8PtrSpi+1, SFCB_FLASH_TOPO_ADR_BYTE);	// +1 first byte is instruction
 					self->uint16SpiLen = SFCB_FLASH_TOPO_ADR_BYTE + 1;	// +1: IST
 					/* on first packet add header */
 					uint16PagesBytesAvail = SFCB_FLASH_TOPO_PAGE_SIZE;
@@ -478,9 +502,7 @@ void sfcb_worker (spi_flash_cb *self)
 					memset(self->uint8PtrSpi, 0, self->uint16SpiLen);	// written data is zero
 					/* Flash instrcution */
 					self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_DATA;	// read data
-					self->uint8PtrSpi[1] = ((self->uint32IterPage >> 16) & 0xFF);	// High Address
-					self->uint8PtrSpi[2] = ((self->uint32IterPage >> 8) & 0xFF);
-					self->uint8PtrSpi[3] = (self->uint32IterPage & 0xFF);			// Low Address
+					sfcb_adr32_uint8(self->uint32IterPage, self->uint8PtrSpi+1, SFCB_FLASH_TOPO_ADR_BYTE);	// +1 first byte is instruction
 					/* go on with next stage */
 					self->uint8Stg = SFCB_STG_02;	// now wait for transfer
 					return;
