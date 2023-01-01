@@ -303,6 +303,7 @@ void sfcb_worker (spi_flash_cb *self)
 					break;
 				/* Wait for Sector Erase */	
 				case STG03:
+					sfcb_printf("  INFO:%s:MKCB:STG3: Wait for Sector Erase\n", __FUNCTION__);
 					/* Start at zero Element with search for free page */
 					self->uint16IterElem = 0;
 					/* Assemble command for WIP */
@@ -314,6 +315,7 @@ void sfcb_worker (spi_flash_cb *self)
 					break;				
 				/* something strange happend */
 				default:
+					sfcb_printf("  ERROR:%s:MKCB: unexpected use of default path\n", __FUNCTION__);
 					break;
 			}
 			break;
@@ -326,6 +328,7 @@ void sfcb_worker (spi_flash_cb *self)
 			switch (self->stage) {
 				/* check for WIP */
 				case STG00:
+					sfcb_printf("  INFO:%s:ADD:STG0: check for WIP\n", __FUNCTION__);
 					if ( (0 == self->uint16SpiLen) || (0 != (self->uint8PtrSpi[1] & SFCB_FLASH_MNG_WIP_MSK)) ) {
 						/* First Request or WIP */
 						self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_STATE_REG;
@@ -337,6 +340,7 @@ void sfcb_worker (spi_flash_cb *self)
 					__attribute__((fallthrough));	// Go one with next
 				/* Circular Buffer written, if not write enable */
 				case STG01:
+					sfcb_printf("  INFO:%s:ADD:STG1: Circular Buffer completly written, if not write enable\n", __FUNCTION__);
 					/* Page Requested to program */
 					if ( self->uint16IterElem < self->uint16CbElemPlSize ) {
 						/* enable WRITE Latch */
@@ -355,6 +359,7 @@ void sfcb_worker (spi_flash_cb *self)
 					break;
 				/* Page Write to Circular Buffer */
 				case STG02:
+					sfcb_printf("  INFO:%s:ADD:STG2: Page Write to Circular Buffer\n", __FUNCTION__);
 					/* assemble Flash Instruction packet */
 					self->uint8PtrSpi[0] = SFCB_FLASH_IST_WR_PAGE;	// write page
 					sfcb_adr32_uint8(self->uint32IterPage, self->uint8PtrSpi+1, SFCB_FLASH_TOPO_ADR_BYTE);	// +1 first byte is instruction
@@ -387,6 +392,7 @@ void sfcb_worker (spi_flash_cb *self)
 					break;
 				/* something strange happend */
 				default:
+					sfcb_printf("  ERROR:%s:ADD: unexpected use of default path\n", __FUNCTION__);
 					break;
 			}
 			break;
@@ -406,6 +412,7 @@ void sfcb_worker (spi_flash_cb *self)
 			switch (self->stage) {
 				/* check for WIP */
 				case STG00:
+					sfcb_printf("  INFO:%s:RAW:STG0: check for WIP\n", __FUNCTION__);
 					if ( (0 == self->uint16SpiLen) || (0 != (self->uint8PtrSpi[1] & SFCB_FLASH_MNG_WIP_MSK)) ) {
 						/* First Request or WIP */
 						self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_STATE_REG;
@@ -416,8 +423,9 @@ void sfcb_worker (spi_flash_cb *self)
 					self->uint16SpiLen = 0;	// no data available
 					self->stage = STG01;	// Go one with search for Free Segment
 					__attribute__((fallthrough));	// Go one with stage
-				/* Prepare raw read*/
+				/* Prepare raw read */
 				case STG01:
+					sfcb_printf("  INFO:%s:RAW:STG1: Prepare RAW read\n", __FUNCTION__);
 					/* check for enough spi buf */
 					if ( self->uint16SpiMax < (self->uint16CbElemPlSize + SFCB_FLASH_TOPO_ADR_BYTE + 1) ) {	// IST (+1) + ADR_BYTE: caused by read instruction
 						self->uint8Busy = 0;
@@ -436,6 +444,7 @@ void sfcb_worker (spi_flash_cb *self)
 					return;
 				/* copy data from SPI back */
 				case STG02:
+					sfcb_printf("  INFO:%s:RAW:STG2: copy data from SPI back\n", __FUNCTION__);
 					memcpy(self->ptrCbElemPl, self->uint8PtrSpi+SFCB_FLASH_TOPO_ADR_BYTE+1, self->uint16CbElemPlSize);	// skip header from answer of read instruction
 					self->uint16SpiLen = 0;
 					self->cmd = IDLE;
@@ -444,6 +453,7 @@ void sfcb_worker (spi_flash_cb *self)
 					return;
 				/* something strange happend */
 				default:
+					sfcb_printf("  ERROR:%s:RAW: unexpected use of default path\n", __FUNCTION__);
 					break;
 			}
 			break;
