@@ -111,7 +111,7 @@ int sfcb_init (t_sfcb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen
     self->ptrCbs = (t_sfcb_cb*) cb;		// circular buffer element array
 	self->uint8PtrSpi = (uint8_t*) spi;	// uint8 array
 	self->uint16SpiMax = spiLen;		// max array length
-	self->uint8Error = SFCB_ERO_NO;
+	self->error = NOERO;
     self->ptrCbElemPl = NULL;
 	self->uint16CbElemPlSize = 0;
 	/* memory addresses */
@@ -429,9 +429,9 @@ void sfcb_worker (t_sfcb *self)
 					/* check for enough spi buf */
 					if ( self->uint16SpiMax < (self->uint16CbElemPlSize + SFCB_FLASH_TOPO_ADR_BYTE + 1) ) {	// IST (+1) + ADR_BYTE: caused by read instruction
 						self->uint8Busy = 0;
-						self->cmd = IDLE;	// go in idle
+						self->cmd = IDLE;		// go in idle
 						self->stage = STG00;
-						//self->error = SPI_BUF_SIZE;	// requested operation ends with an error
+						self->error = BUFSIZE;	// requested operation ends with an error
 					}
 					/* SPI package is zero */
 					self->uint16SpiLen = (uint16_t) (self->uint16CbElemPlSize + SFCB_FLASH_TOPO_ADR_BYTE + 1);	// +1: for instruction
@@ -603,7 +603,7 @@ int sfcb_mkcb (t_sfcb *self)
 	self->cmd = MKCB;
 	self->uint16IterElem = 0;
 	self->stage = STG00;
-	self->uint8Error = SFCB_ERO_NO;
+	self->error = NOERO;
 	self->uint8Busy = 1;
 	/* fine */
 	return 0;
@@ -640,7 +640,7 @@ int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
 	self->uint8Busy = 1;
 	self->cmd = ADD;
 	self->stage = STG00;
-	self->uint8Error = SFCB_ERO_NO;
+	self->error = NOERO;
 	/* fine */
 	return 0;
 }
@@ -689,7 +689,7 @@ int sfcb_flash_read (t_sfcb *self, uint32_t adr, void *data, uint16_t len)
 	self->uint8Busy = 1;
 	self->cmd = RAW;	// RAW read from Flash
 	self->stage = STG00;
-	self->uint8Error = SFCB_ERO_NO;
+	self->error = NOERO;
 	/* fine */
 	return 0;
 }

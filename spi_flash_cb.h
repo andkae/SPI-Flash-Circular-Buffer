@@ -101,8 +101,26 @@ typedef enum __attribute__((packed))
     STG00,	/**<  Stage 0, different meanings based on executed command */
     STG01,  /**<  Stage 1, different meanings based on executed command */
     STG02,  /**<  Stage 2, different meanings based on executed command */
-    STG03,  /**<  Stage 3, different meanings based on executed command */
+    STG03  	/**<  Stage 3, different meanings based on executed command */
 } t_sfcb_stage;
+
+
+
+/**
+ *  @typedef t_sfcb_error
+ *
+ *  @brief  Errors
+ *
+ *  Ocured Erros while driver execution
+ *
+ *  @since  2022-01-01
+ *  @author Andreas Kaeberlein
+ */
+typedef enum __attribute__((packed))
+{
+    NOERO,		/**<  No Error occured */
+	BUFSIZE		/**<  Buffer too small for operation */
+} t_sfcb_error;
 
 
 
@@ -178,7 +196,7 @@ typedef struct t_sfcb
     uint16_t		uint16IterElem;			/**< Iterator for splitted interaction, iteartor over elements in circular buffer */
     uint32_t		uint32IterPage;			/**< Page Iterator. Contents full byte address but in multiple of pages. F. e. captures last header page, next page write */
     t_sfcb_stage	stage;					/**< Execution stage, from last interaction, #t_sfcb_stage */
-    uint8_t			uint8Error;				/**< Error code if somehting strange happend */
+    t_sfcb_error	error;					/**< Error code if somehting strange happend, #t_sfcb_error */
     void*			ptrCbElemPl;			/**< Pointer to Payload data of CB Element */
 	uint16_t		uint16DataLen;			/**< data length */
     uint16_t		uint16CbElemPlSize;		/**< Size of payload data in bytes */
