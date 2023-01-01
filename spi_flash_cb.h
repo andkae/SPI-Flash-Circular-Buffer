@@ -42,35 +42,6 @@
 
 
 /**
- * @defgroup SFCB_CMD
- *
- * States for Worker
- *
- * @{
- */
-#define SFCB_CMD_IDLE	(0x00)      /**<  Nothing to do */
-#define SFCB_CMD_MKCB	(0x01)      /**<  Make Circular Buffers */
-#define SFCB_CMD_ADD	(0x02)      /**<  Add Element into Circular Buffer */
-#define SFCB_CMD_GET	(0x03)      /**<  Get Data from Element of Circular buffer, there is no pop from the stack after get */
-#define SFCB_CMD_RAW	(0x04)		/**<  get Raw DATA from SPI flash */
-/** @} */
-
-
-/**
- * @defgroup SFCB_STG
- *
- * Execution Stages
- *
- * @{
- */
-#define SFCB_STG_00	(0x00)      /**<  Stage 0 */
-#define SFCB_STG_01	(0x01)      /**<  Stage 1 */
-#define SFCB_STG_02	(0x02)      /**<  Stage 2 */
-#define SFCB_STG_03	(0x03)      /**<  Stage 3 */
-/** @} */
-
-
-/**
  * @defgroup SFCB_ERO
  *
  * Execution Stages
@@ -79,8 +50,6 @@
  */
 #define SFCB_ERO_NO	(0x00)      /**<  No Error */
 /** @} */
-
-
 
 
 
@@ -110,6 +79,30 @@ typedef enum __attribute__((packed))
     GET,    /**<  Get Data from Element of Circular buffer, there is no pop from the stack after get */
     RAW     /**<  Read Raw Data from flash */
 } t_sfcb_cmd;
+
+
+
+/**
+ *  @typedef t_sfcb_stage
+ *
+ *  @brief  stage of command
+ *
+ *  Every command is divided into stages of exectuion.
+ *  The execution starts always on stage 0. If an hardware
+ *  interaction is required then the stage ends and the 
+ *  data packet will sent to hardware. This makes the
+ *  driver interruptible and frees CPU time.
+ *
+ *  @since  2023-01-01
+ *  @author Andreas Kaeberlein
+ */
+typedef enum __attribute__((packed))
+{
+    STG00,	/**<  Stage 0, different meanings based on executed command */
+    STG01,  /**<  Stage 1, different meanings based on executed command */
+    STG02,  /**<  Stage 2, different meanings based on executed command */
+    STG03,  /**<  Stage 3, different meanings based on executed command */
+} t_sfcb_stage;
 
 
 
@@ -162,7 +155,7 @@ typedef struct spi_flash_cb
     uint8_t				uint8IterCb;			/**< Iterator for splitted interaction, iterator over Circular buffers */
     uint16_t			uint16IterElem;			/**< Iterator for splitted interaction, iteartor over elements in circular buffer */
     uint32_t			uint32IterPage;			/**< Page Iterator. Contents full byte address but in multiple of pages. F. e. captures last header page, next page write */
-    uint8_t				uint8Stg;				/**< Execution stage, from last interaction */
+    t_sfcb_stage		stage;					/**< Execution stage, from last interaction */
     uint8_t				uint8Error;				/**< Error code if somehting strange happend */
     void*				ptrCbElemPl;			/**< Pointer to Payload data of CB Element */
 	uint16_t			uint16DataLen;			/**< data length */
