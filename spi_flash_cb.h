@@ -93,7 +93,7 @@ typedef enum __attribute__((packed))
  *  data packet will sent to hardware. This makes the
  *  driver interruptible and frees CPU time.
  *
- *  @since  2023-01-01
+ *  @since  2022-01-01
  *  @author Andreas Kaeberlein
  */
 typedef enum __attribute__((packed))
@@ -106,6 +106,16 @@ typedef enum __attribute__((packed))
 
 
 
+/**
+ *  @typedef spi_flash_cb_elem_head
+ *
+ *  @brief  circular buffer element head
+ *
+ *  Header to mark the start of an circular buffer element.
+ *
+ *  @since  2022-07-22
+ *  @author Andreas Kaeberlein
+ */
 typedef struct spi_flash_cb_elem_head
 {
     uint32_t	uint32MagicNum;	/**< Magic Number for marking valid block */
@@ -114,6 +124,18 @@ typedef struct spi_flash_cb_elem_head
 
 
 
+/**
+ *  @typedef t_sfcb_cb
+ *
+ *  @brief  queue management
+ *
+ *  Cicrcular buffer queue managament entry.
+ *  This structure is used in an array and for every
+ *  circular buffer queue is such an entry mandatory
+ *
+ *  @since  2022-07-22
+ *  @author Andreas Kaeberlein
+ */
 typedef struct t_sfcb_cb
 {
     uint8_t		uint8Used;					/**< Entry is used */
@@ -146,16 +168,16 @@ typedef struct t_sfcb
 {
     uint8_t			uint8FlashPresent;		/**< checks if selected flashtype is available */
     uint8_t			uint8NumCbs;			/**< number of circular buffers */
-    t_sfcb_cb*		ptrCbs;					/**< List with flash circular buffer management info */
+    t_sfcb_cb*		ptrCbs;					/**< List with flash circular buffer management info, #t_sfcb_cb */
     uint8_t*		uint8PtrSpi;			/**< SPI/CB layer interaction buffer */
 	uint16_t		uint16SpiLen;			/**< used buffer length */
     uint16_t		uint16SpiMax;			/**< maximum spi buffer length */
 	uint8_t			uint8Busy;				/**< Performing splitted interaction of circular buffers */
-    t_sfcb_cmd		cmd;					/**< Command to be executed */
+    t_sfcb_cmd		cmd;					/**< Command to be executed, #t_sfcb_cmd */
     uint8_t			uint8IterCb;			/**< Iterator for splitted interaction, iterator over Circular buffers */
     uint16_t		uint16IterElem;			/**< Iterator for splitted interaction, iteartor over elements in circular buffer */
     uint32_t		uint32IterPage;			/**< Page Iterator. Contents full byte address but in multiple of pages. F. e. captures last header page, next page write */
-    t_sfcb_stage	stage;					/**< Execution stage, from last interaction */
+    t_sfcb_stage	stage;					/**< Execution stage, from last interaction, #t_sfcb_stage */
     uint8_t			uint8Error;				/**< Error code if somehting strange happend */
     void*			ptrCbElemPl;			/**< Pointer to Payload data of CB Element */
 	uint16_t		uint16DataLen;			/**< data length */
