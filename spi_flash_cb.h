@@ -193,6 +193,21 @@ int sfcb_init (spi_flash_cb *self, void *cb, uint8_t cbLen, void *spi, uint16_t 
 
 
 /**
+ *  @brief worker
+ *
+ *  Services Circular buffer layer, request/processes SPI packets.
+ *  Executes request from #sfcb_mkcb, 
+ *
+ *  @param[in,out]  self                handle
+ *  @return         void                state
+ *  @since          2022-07-27
+ *  @author         Andreas Kaeberlein
+ */
+void sfcb_worker (spi_flash_cb *self);
+
+
+
+/**
  *  @brief new_cb
  *
  *  creates new circular buffer entry in flash parition table
@@ -209,21 +224,6 @@ int sfcb_init (spi_flash_cb *self, void *cb, uint8_t cbLen, void *spi, uint16_t 
  *  @author         Andreas Kaeberlein
  */
 int sfcb_new_cb (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_t numElems, uint8_t *cbID);
-
-
-
-/**
- *  @brief worker
- *
- *  Services Circular buffer layer, request/processes SPI packets.
- *  Executes request from #sfcb_mkcb, 
- *
- *  @param[in,out]  self                handle
- *  @return         void                state
- *  @since          2022-07-27
- *  @author         Andreas Kaeberlein
- */
-void sfcb_worker (spi_flash_cb *self);
 
 
 
@@ -294,6 +294,19 @@ int sfcb_mkcb (spi_flash_cb *self);
 int sfcb_add (spi_flash_cb *self, uint8_t cbID, void *data, uint16_t len);
 
 
+
+/**
+ *  @brief idmax
+ *
+ *  get maximum id in selected circular buffer queue
+ *
+ *  @param[in,out]  self                handle
+ *  @param[in]      cbID            	Logical Number of Cicular Buffer queue
+ *  @return         uint32_t            highest id number of selected circular buffer queue
+ *  @since          2023-01-01
+ *  @author         Andreas Kaeberlein
+ */
+uint32_t sfcb_idmax (spi_flash_cb *self,  uint8_t cbID);
 
 
 
