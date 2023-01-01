@@ -691,7 +691,7 @@ int sfcb_flash_read (spi_flash_cb *self, uint32_t adr, void *data, uint16_t len)
  *  sfcb_idmax
  *    get maximum id in selected circular buffer queue
  */
-uint32_t sfcb_idmax (spi_flash_cb *self,  uint8_t cbID)
+uint32_t sfcb_idmax (spi_flash_cb *self, uint8_t cbID)
 {
 	/* check if selected queue is used */
 	if ( 0 == ((self->ptrCbs)[cbID]).uint8Used ) {

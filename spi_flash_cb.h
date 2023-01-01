@@ -306,7 +306,7 @@ int sfcb_add (spi_flash_cb *self, uint8_t cbID, void *data, uint16_t len);
  *  @since          2023-01-01
  *  @author         Andreas Kaeberlein
  */
-uint32_t sfcb_idmax (spi_flash_cb *self,  uint8_t cbID);
+uint32_t sfcb_idmax (spi_flash_cb *self, uint8_t cbID);
 
 
 

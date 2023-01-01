@@ -197,14 +197,19 @@ int main ()
         printf("ERROR:%s:sfm_cmp:q0 Mismatch\n", __FUNCTION__);
         goto ERO_END;
     }
+	/* check highest id */
+	uint32Counter = sfcb_idmax(&sfcb, 0);
+	if ( 63 != uint32Counter ) {
+        printf("ERROR:%s:sfcb_idmax:q0 exp,idmax=63, is,idmax=%d\n", __FUNCTION__, uint32Counter);
+        goto ERO_END;
+	}
+	
+	
+
+	
+	
+	
 	sfm_dump( &spiFlash, 0, 256 );	// dump SPI flash content
-	
-	
-	
-	
-	
-	
-	
 	sfm_store(&spiFlash, "./flash.dif");	// write to file
 	
 	
