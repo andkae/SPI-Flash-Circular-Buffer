@@ -43,8 +43,8 @@ int print_raw_sfcb_cb (void* sfcb_cb, uint8_t num_sfcb_cb )
 	/* print to console */
 	for ( uint8_t i = 0; i < num_sfcb_cb; i++ ) {
 		printf("INFO:sfcb_cb[%i]: ", i);
-		for ( uint8_t j = 0; j < sizeof(spi_flash_cb_elem); j++ ) {
-			printf("%02x", *(((uint8_t*) ((spi_flash_cb_elem*) sfcb_cb))+i*sizeof(spi_flash_cb_elem)+j));
+		for ( uint8_t j = 0; j < sizeof(t_sfcb_cb); j++ ) {
+			printf("%02x", *(((uint8_t*) ((t_sfcb_cb*) sfcb_cb))+i*sizeof(t_sfcb_cb)+j));
 		}
 		printf("\n");
 	}
@@ -60,15 +60,15 @@ int print_raw_sfcb_cb (void* sfcb_cb, uint8_t num_sfcb_cb )
 int main ()
 {
     /** Variables **/
-	const uint32_t		uint32SpiFlashCycleOut = 1000;		// abort calling SPI flash
-	uint32_t			uint32Counter;						// counter
-	t_sfm       		spiFlash;   						// SPI flash model
-	int					sfm_state;							// SPI Flash model return state
-	t_sfcb		sfcb;								// SPI Flash as circular buffer
-	spi_flash_cb_elem	sfcb_cb[5];							// five logical parts in SPI Flash
-	uint8_t				uint8Spi[266];						// SPI packet buffer
-	uint8_t				uint8Temp;							// help variable
-	uint8_t				uint8FlashData[] = {0,1,2,3,4,5};	// SPI test data
+	const uint32_t	uint32SpiFlashCycleOut = 1000;		// abort calling SPI flash
+	uint32_t		uint32Counter;						// counter
+	t_sfm       	spiFlash;   						// SPI flash model
+	int				sfm_state;							// SPI Flash model return state
+	t_sfcb			sfcb;								// SPI Flash as circular buffer
+	t_sfcb_cb		sfcb_cb[5];							// five logical parts in SPI Flash
+	uint8_t			uint8Spi[266];						// SPI packet buffer
+	uint8_t			uint8Temp;							// help variable
+	uint8_t			uint8FlashData[] = {0,1,2,3,4,5};	// SPI test data
 	
 
 	/* entry message */

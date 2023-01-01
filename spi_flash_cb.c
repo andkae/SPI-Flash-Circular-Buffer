@@ -108,9 +108,9 @@ int sfcb_init (t_sfcb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen
     self->uint8Busy = 0;
 	self->cmd = IDLE;	// free for request
 	self->stage = STG00;
-    self->ptrCbs = (spi_flash_cb_elem*) cb;	// circular buffer element array
-	self->uint8PtrSpi = (uint8_t*) spi;		// uint8 array
-	self->uint16SpiMax = spiLen;			// max array length
+    self->ptrCbs = (t_sfcb_cb*) cb;		// circular buffer element array
+	self->uint8PtrSpi = (uint8_t*) spi;	// uint8 array
+	self->uint16SpiMax = spiLen;		// max array length
 	self->uint8Error = SFCB_ERO_NO;
     self->ptrCbElemPl = NULL;
 	self->uint16CbElemPlSize = 0;

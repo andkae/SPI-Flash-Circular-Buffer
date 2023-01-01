@@ -114,7 +114,7 @@ typedef struct spi_flash_cb_elem_head
 
 
 
-typedef struct spi_flash_cb_elem
+typedef struct t_sfcb_cb
 {
     uint8_t		uint8Used;					/**< Entry is used */
     uint8_t		uint8Init;					/**< Data structure initialized */
@@ -128,7 +128,7 @@ typedef struct spi_flash_cb_elem
     uint16_t	uint16NumPagesPerElem;		/**< Number of pages per element */
     uint16_t	uint16NumEntriesMax;		/**< Maximal Number of entries in circular buffer caused by partition table */
     uint16_t	uint16NumEntries;			/**< Number of entries in circular buffer */
-} spi_flash_cb_elem;
+} t_sfcb_cb;
 
 
 
@@ -144,22 +144,22 @@ typedef struct spi_flash_cb_elem
  */
 typedef struct t_sfcb
 {
-    uint8_t				uint8FlashPresent;		/**< checks if selected flashtype is available */
-    uint8_t				uint8NumCbs;			/**< number of circular buffers */
-    spi_flash_cb_elem*	ptrCbs;					/**< List with flash circular buffer management info */
-    uint8_t*			uint8PtrSpi;			/**< SPI/CB layer interaction buffer */
-	uint16_t			uint16SpiLen;			/**< used buffer length */
-    uint16_t			uint16SpiMax;			/**< maximum spi buffer length */
-	uint8_t				uint8Busy;				/**< Performing splitted interaction of circular buffers */
-    t_sfcb_cmd			cmd;					/**< Command to be executed */
-    uint8_t				uint8IterCb;			/**< Iterator for splitted interaction, iterator over Circular buffers */
-    uint16_t			uint16IterElem;			/**< Iterator for splitted interaction, iteartor over elements in circular buffer */
-    uint32_t			uint32IterPage;			/**< Page Iterator. Contents full byte address but in multiple of pages. F. e. captures last header page, next page write */
-    t_sfcb_stage		stage;					/**< Execution stage, from last interaction */
-    uint8_t				uint8Error;				/**< Error code if somehting strange happend */
-    void*				ptrCbElemPl;			/**< Pointer to Payload data of CB Element */
-	uint16_t			uint16DataLen;			/**< data length */
-    uint16_t			uint16CbElemPlSize;		/**< Size of payload data in bytes */
+    uint8_t			uint8FlashPresent;		/**< checks if selected flashtype is available */
+    uint8_t			uint8NumCbs;			/**< number of circular buffers */
+    t_sfcb_cb*		ptrCbs;					/**< List with flash circular buffer management info */
+    uint8_t*		uint8PtrSpi;			/**< SPI/CB layer interaction buffer */
+	uint16_t		uint16SpiLen;			/**< used buffer length */
+    uint16_t		uint16SpiMax;			/**< maximum spi buffer length */
+	uint8_t			uint8Busy;				/**< Performing splitted interaction of circular buffers */
+    t_sfcb_cmd		cmd;					/**< Command to be executed */
+    uint8_t			uint8IterCb;			/**< Iterator for splitted interaction, iterator over Circular buffers */
+    uint16_t		uint16IterElem;			/**< Iterator for splitted interaction, iteartor over elements in circular buffer */
+    uint32_t		uint32IterPage;			/**< Page Iterator. Contents full byte address but in multiple of pages. F. e. captures last header page, next page write */
+    t_sfcb_stage	stage;					/**< Execution stage, from last interaction */
+    uint8_t			uint8Error;				/**< Error code if somehting strange happend */
+    void*			ptrCbElemPl;			/**< Pointer to Payload data of CB Element */
+	uint16_t		uint16DataLen;			/**< data length */
+    uint16_t		uint16CbElemPlSize;		/**< Size of payload data in bytes */
     
 } t_sfcb;
 
@@ -171,7 +171,7 @@ typedef struct t_sfcb
  *  initializes flash circular buffer
  *
  *  @param[in,out]  self                handle
- *  @param[in,out]  *cb                 pointer to allocated memory for circulat buffer list, see #spi_flash_cb_elem
+ *  @param[in,out]  *cb                 pointer to allocated memory for circulat buffer list, see #t_sfcb
  *  @param[in]      cbLen               number of maximum allowed circular buffers
  *  @param[in,out]  *spi                pointer to uint8_t spi interaction buffer, buffer betwween spi core and flash driver
  *  @param[in]      spiLen              maimum number of elements in buffer => size in byte
