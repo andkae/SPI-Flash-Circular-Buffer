@@ -133,7 +133,7 @@ typedef struct spi_flash_cb_elem
 
 
 /**
- *  @typedef spi_flash_cb
+ *  @typedef t_sfcb
  *
  *  @brief  circular buffer
  *
@@ -142,7 +142,7 @@ typedef struct spi_flash_cb_elem
  *  @since  July 22, 2022
  *  @author Andreas Kaeberlein
  */
-typedef struct spi_flash_cb
+typedef struct t_sfcb
 {
     uint8_t				uint8FlashPresent;		/**< checks if selected flashtype is available */
     uint8_t				uint8NumCbs;			/**< number of circular buffers */
@@ -161,7 +161,7 @@ typedef struct spi_flash_cb
 	uint16_t			uint16DataLen;			/**< data length */
     uint16_t			uint16CbElemPlSize;		/**< Size of payload data in bytes */
     
-} spi_flash_cb;
+} t_sfcb;
 
 
 
@@ -181,7 +181,7 @@ typedef struct spi_flash_cb
  *  @since          2022-07-25
  *  @author         Andreas Kaeberlein
  */
-int sfcb_init (spi_flash_cb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen);
+int sfcb_init (t_sfcb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen);
 
 
 
@@ -196,7 +196,7 @@ int sfcb_init (spi_flash_cb *self, void *cb, uint8_t cbLen, void *spi, uint16_t 
  *  @since          2022-07-27
  *  @author         Andreas Kaeberlein
  */
-void sfcb_worker (spi_flash_cb *self);
+void sfcb_worker (t_sfcb *self);
 
 
 
@@ -216,7 +216,7 @@ void sfcb_worker (spi_flash_cb *self);
  *  @since          2022-07-25
  *  @author         Andreas Kaeberlein
  */
-int sfcb_new_cb (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_t numElems, uint8_t *cbID);
+int sfcb_new_cb (t_sfcb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_t numElems, uint8_t *cbID);
 
 
 
@@ -232,7 +232,7 @@ int sfcb_new_cb (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeByte, u
  *  @since          2022-07-29
  *  @author         Andreas Kaeberlein
  */
-int sfcb_busy (spi_flash_cb *self);
+int sfcb_busy (t_sfcb *self);
 
 
 
@@ -246,7 +246,7 @@ int sfcb_busy (spi_flash_cb *self);
  *  @since          2022-08-19
  *  @author         Andreas Kaeberlein
  */
-uint16_t sfcb_spi_len (spi_flash_cb *self);
+uint16_t sfcb_spi_len (t_sfcb *self);
 
 
 
@@ -263,7 +263,7 @@ uint16_t sfcb_spi_len (spi_flash_cb *self);
  *  @since          2022-07-27
  *  @author         Andreas Kaeberlein
  */
-int sfcb_mkcb (spi_flash_cb *self);
+int sfcb_mkcb (t_sfcb *self);
 
 
 
@@ -284,7 +284,7 @@ int sfcb_mkcb (spi_flash_cb *self);
  *  @since          2022-07-28
  *  @author         Andreas Kaeberlein
  */
-int sfcb_add (spi_flash_cb *self, uint8_t cbID, void *data, uint16_t len);
+int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len);
 
 
 
@@ -299,7 +299,7 @@ int sfcb_add (spi_flash_cb *self, uint8_t cbID, void *data, uint16_t len);
  *  @since          2023-01-01
  *  @author         Andreas Kaeberlein
  */
-uint32_t sfcb_idmax (spi_flash_cb *self, uint8_t cbID);
+uint32_t sfcb_idmax (t_sfcb *self, uint8_t cbID);
 
 
 

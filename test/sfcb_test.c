@@ -64,7 +64,7 @@ int main ()
 	uint32_t			uint32Counter;						// counter
 	t_sfm       		spiFlash;   						// SPI flash model
 	int					sfm_state;							// SPI Flash model return state
-	spi_flash_cb		sfcb;								// SPI Flash as circular buffer
+	t_sfcb		sfcb;								// SPI Flash as circular buffer
 	spi_flash_cb_elem	sfcb_cb[5];							// five logical parts in SPI Flash
 	uint8_t				uint8Spi[266];						// SPI packet buffer
 	uint8_t				uint8Temp;							// help variable
@@ -90,7 +90,7 @@ int main ()
 	printf("INFO:%s:sfcb_cb_p       = %p\n", 	__FUNCTION__, &sfcb_cb);
 	printf("INFO:%s:sfcb_cb[0]_size = 0x%x\n",	__FUNCTION__, (int) sizeof(sfcb_cb[0]));
 	memset(sfcb_cb, 0xaf, sizeof(sfcb_cb));	// mess-up memory to check init
-	/* int sfcb_init (spi_flash_cb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen) */
+	/* int sfcb_init (t_sfcb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen) */
 	sfcb_init (&sfcb, &sfcb_cb, sizeof(sfcb_cb)/sizeof(sfcb_cb[0]), &uint8Spi, sizeof(uint8Spi)/sizeof(uint8Spi[0]));
 	/* check for errror */
 	for ( uint8_t i = 0; i < sizeof(sfcb_cb)/sizeof(sfcb_cb[0]); i++ ) {

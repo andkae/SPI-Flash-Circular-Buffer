@@ -8,7 +8,7 @@
  @telephone     : +49 371 4810-2108
  @email         : andreas.kaeberlein@siemens.com
 
- @file          : spi_flash_cb.h
+ @file          : spi_flash_cb.c
  @date          : July 22, 2022
 
  @brief         : SPI FLash Circular Buffer
@@ -91,7 +91,7 @@ static inline void sfcb_adr32_uint8(uint32_t adr, uint8_t *spi, uint8_t adrBytes
  *  sfcb_init
  *    initializes handle
  */
-int sfcb_init (spi_flash_cb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen)
+int sfcb_init (t_sfcb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen)
 {
     /* Function call message */
 	sfcb_printf("__FUNCTION__ = %s\n", __FUNCTION__);
@@ -139,7 +139,7 @@ int sfcb_init (spi_flash_cb *self, void *cb, uint8_t cbLen, void *spi, uint16_t 
  *  spi_flash_cb_worker
  *    executes request from ... 
  */
-void sfcb_worker (spi_flash_cb *self)
+void sfcb_worker (t_sfcb *self)
 {
 	/** Variables **/
 	spi_flash_cb_elem_head*	cbHead = (spi_flash_cb_elem_head*) (self->uint8PtrSpi+SFCB_FLASH_TOPO_ADR_BYTE+1);	// assign spi buffer to head structure, +: 1 byte instruction + address bytes
@@ -481,7 +481,7 @@ uint32_t sfcb_flash_size (void)
  *  sfcb_new_cb 
  *    creates new circular buffer entry
  */
-int sfcb_new_cb (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_t numElems, uint8_t *cbID)
+int sfcb_new_cb (t_sfcb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_t numElems, uint8_t *cbID)
 {	
 	/** help variables **/
 	const uint8_t	uint8PagesPerSector = (uint8_t) (SFCB_FLASH_TOPO_SECTOR_SIZE / SFCB_FLASH_TOPO_PAGE_SIZE);
@@ -541,7 +541,7 @@ int sfcb_new_cb (spi_flash_cb *self, uint32_t magicNum, uint16_t elemSizeByte, u
  *  sfcb_busy
  *    checks if #sfcb_worker is free for new requests
  */
-int sfcb_busy (spi_flash_cb *self)
+int sfcb_busy (t_sfcb *self)
 {
 	if ( 0 != self->uint8Busy ) {
 		return 1;	// busy
@@ -555,7 +555,7 @@ int sfcb_busy (spi_flash_cb *self)
  *  sfcb_spi_len
  *    gets length of next spi packet
  */
-uint16_t sfcb_spi_len (spi_flash_cb *self)
+uint16_t sfcb_spi_len (t_sfcb *self)
 {
 	return self->uint16SpiLen;
 }
@@ -566,7 +566,7 @@ uint16_t sfcb_spi_len (spi_flash_cb *self)
  *  sfcb_mkcb
  *    build up queues with circular buffer
  */
-int sfcb_mkcb (spi_flash_cb *self)
+int sfcb_mkcb (t_sfcb *self)
 {	
     /* Function call message */
 	sfcb_printf("__FUNCTION__ = %s\n", __FUNCTION__);
@@ -615,7 +615,7 @@ int sfcb_mkcb (spi_flash_cb *self)
  *  sfcb_add
  *    inserts element into circular buffer
  */
-int sfcb_add (spi_flash_cb *self, uint8_t cbID, void *data, uint16_t len)
+int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
 {	
 	/* no jobs pending */
 	if ( 0 != self->uint8Busy ) {
@@ -651,7 +651,7 @@ int sfcb_add (spi_flash_cb *self, uint8_t cbID, void *data, uint16_t len)
  *  sfcb_get
  *    inserts element into circular buffer
  */
-int sfcb_get (spi_flash_cb *self, uint8_t cbID, void *data, uint16_t len, uint16_t lenMax)
+int sfcb_get (t_sfcb *self, uint8_t cbID, void *data, uint16_t len, uint16_t lenMax)
 {
 	/* no jobs pending */
 	if ( 0 != self->uint8Busy ) {
@@ -675,7 +675,7 @@ int sfcb_get (spi_flash_cb *self, uint8_t cbID, void *data, uint16_t len, uint16
  *  sfcb_flash_read
  *    reads raw binary data from flash
  */
-int sfcb_flash_read (spi_flash_cb *self, uint32_t adr, void *data, uint16_t len)
+int sfcb_flash_read (t_sfcb *self, uint32_t adr, void *data, uint16_t len)
 {
 	/* no jobs pending */
 	if ( 0 != self->uint8Busy ) {
@@ -700,7 +700,7 @@ int sfcb_flash_read (spi_flash_cb *self, uint32_t adr, void *data, uint16_t len)
  *  sfcb_idmax
  *    get maximum id in selected circular buffer queue
  */
-uint32_t sfcb_idmax (spi_flash_cb *self, uint8_t cbID)
+uint32_t sfcb_idmax (t_sfcb *self, uint8_t cbID)
 {
 	/* check if selected queue is used */
 	if ( 0 == ((self->ptrCbs)[cbID]).uint8Used ) {
