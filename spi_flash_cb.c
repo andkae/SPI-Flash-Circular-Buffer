@@ -28,6 +28,24 @@
 
 
 
+/**
+ *  @defgroup SFCB_PRINTF_EN
+ *
+ *  redirect sfcb_printf to printf
+ *
+ *  @{
+ */
+#ifdef SFCB_PRINTF_EN
+    #include <stdio.h>	// allow outputs in unit test
+	#define sfcb_printf(...) printf(__VA_ARGS__)
+#else
+    //#define sfcb_printf(...) neorv32_uart0_printf(__VA_ARGS__)
+	#define sfcb_printf(...)
+#endif
+/** @} */   // DEBUG
+
+
+
 /** @brief ceildivide
  *
  *  dividing with always rounding up
