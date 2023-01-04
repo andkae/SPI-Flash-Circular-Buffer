@@ -34,7 +34,8 @@
     #include <stdio.h>	// allow outputs in unit test
 	#define sfcb_printf(...) printf(__VA_ARGS__)
 #else
-    #define sfcb_printf(...)
+    //#define sfcb_printf(...) neorv32_uart0_printf(__VA_ARGS__)
+	#define sfcb_printf(...)
 #endif
 
 /** @} */   // DEBUG

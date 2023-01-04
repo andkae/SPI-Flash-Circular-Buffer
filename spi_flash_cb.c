@@ -174,7 +174,13 @@ void sfcb_worker (t_sfcb *self)
 			switch (self->stage) {
 				/* check for WIP */
 				case STG00:
-					sfcb_printf("  INFO:%s:MKCB:STG0: check for WIP\n", __FUNCTION__);
+					/* Debug message */
+					sfcb_printf (  "  INFO:%s:MKCB:STG0:check for WIP, uint16SpiLen=%d, uint8PtrSpi[1]=0x%02x\n", 
+					               __FUNCTION__,
+								   self->uint16SpiLen,
+							       self->uint8PtrSpi[1]
+								);
+					/* check */
 					if ( (0 == self->uint16SpiLen) || (0 != (self->uint8PtrSpi[1] & SFCB_FLASH_MNG_WIP_MSK)) ) {
 						/* First Request or WIP */
 						self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_STATE_REG;
@@ -187,13 +193,23 @@ void sfcb_worker (t_sfcb *self)
 					__attribute__((fallthrough));	// Go one with next
 				/* Find Page for next Circulat buffer element */
 				case STG01:
-					sfcb_printf("  INFO:%s:MKCB:STG1: find empty page for next element\n", __FUNCTION__);
+					/* Debug message */
+					sfcb_printf("  INFO:%s:MKCB:STG1: find empty page for new element\n", __FUNCTION__);
 					/* check last response */
 					if ( 0 != self->uint16SpiLen ) {
+						/* Debug Message */
+						sfcb_printf("  INFO:%s:MKCB:STG1: SPI ", __FUNCTION__);
+						for ( uint8_t i = 0; i < 12; i++ ) {
+							sfcb_printf("0x%x ", self->uint8PtrSpi[i]);
+						}
+						sfcb_printf("\n");
+						sfcb_printf("  INFO:%s:MKCB:STG1: CBHEAD,magicnum=0x%x\n", __FUNCTION__, cbHead->uint32MagicNum);
 						/* Flash Area is used by circular buffer, check magic number 
 						 *   +4: Read instruction + 32bit address
 						 */
 						if ( cbHead->uint32MagicNum == ((self->ptrCbs)[self->uint8IterCb]).uint32MagicNum ) {
+							/* Debug Message */
+							sfcb_printf("  INFO:%s:MKCB:STG1: Valid Entry Found\n", __FUNCTION__);
 							/* count available elements */
 							(((self->ptrCbs)[self->uint8IterCb]).uint16NumEntries)++;
 							/* get highest number of numbered circular buffer elements, needed for next entry */
@@ -206,11 +222,6 @@ void sfcb_worker (t_sfcb *self)
 								((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin = cbHead->uint32IdNum;
 								((self->ptrCbs)[self->uint8IterCb]).uint32StartPageIdMin = self->uint32IterPage;
 							}
-							sfcb_printf ( "  INFO:%s:MKCB:STG1: idmin=0x%x, idmax=0x%x\n", 
-										  __FUNCTION__, 
-										  ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin, 
-										  ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax
-										);
 						} else {
 							/* check for unused header 
 							 * first unused pages is alocated, iterate over all elements to get all IDs
@@ -221,6 +232,8 @@ void sfcb_worker (t_sfcb *self)
 									/* corrupted empty page found, leave as it is */
 									if ( 0xFF != self->uint8PtrSpi[i] ) {
 										uint8Good = 0;	// try to find next free clean page
+										sfcb_printf ("  ERROR:%s:MKCB:STG1: corrupted empty page found at 0x%0x\n", __FUNCTION__, self->uint32IterPage);
+										break;
 									}	
 								}
 								/* save page number for next circular buffer entry */
@@ -231,6 +244,15 @@ void sfcb_worker (t_sfcb *self)
 							}
 						}
 					}
+					/* Current Status Message */
+					sfcb_printf ( "  INFO:%s:MKCB:STG1: cb=%d, elem=%d, flashadr=0x%x, idmin=0x%x, idmax=0x%x\n", 
+								  __FUNCTION__, 
+								  self->uint8IterCb,
+								  self->uint16IterElem,
+								  self->uint32IterPage,
+								  ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin, 
+								  ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax
+								);	
 					/* request next header of circular buffer */
 					self->uint32IterPage = 	((self->ptrCbs)[self->uint8IterCb]).uint32StartSector * (uint32_t) SFCB_FLASH_TOPO_SECTOR_SIZE
 											+
