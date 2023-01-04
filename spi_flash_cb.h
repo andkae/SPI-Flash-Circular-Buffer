@@ -210,6 +210,19 @@ void sfcb_worker (t_sfcb *self);
 
 
 /**
+ *  @brief flash size
+ *
+ *  Total Flash Size in bytes
+ *
+ *  @return         uint32_t            flash size in byte
+ *  @since          2023-01-04
+ *  @author         Andreas Kaeberlein
+ */
+uint32_t sfcb_flash_size (void);
+
+
+
+/**
  *  @brief new_cb
  *
  *  creates new circular buffer entry in flash parition table
