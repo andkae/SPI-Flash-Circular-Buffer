@@ -69,6 +69,7 @@ int main ()
 	uint8_t			uint8Spi[266];						// SPI packet buffer
 	uint8_t			uint8Temp;							// help variable
 	uint8_t			uint8FlashData[] = {0,1,2,3,4,5};	// SPI test data
+	uint8_t			uint8Buf[1024];						// help buffer
 	
 
 	/* entry message */
@@ -205,10 +206,36 @@ int main ()
 	}
 	
 	
+	/* sfcb_mkcb 
+	 *   reads raw binary data from flash
+	*/
+	printf("INFO:%s:sfcb_flash_read\n", __FUNCTION__);	
+		// int sfcb_flash_read (t_sfcb *self, uint32_t adr, void *data, uint16_t len)
+	if ( 0 != sfcb_flash_read (&sfcb, 0, &uint8Buf, 256) ) {
+		printf("ERROR:%s:sfcb_flash_read failed to start", __FUNCTION__);
+		goto ERO_END;
+	}
+	uint32Counter = 0;
+	while ( (0 != sfcb_busy(&sfcb)) && ((uint32Counter++) < uint32SpiFlashCycleOut) ) {
+		/* SFCB Worker */
+		sfcb_worker (&sfcb);
+		/* interact SPI Flash Model */
+		sfm_state = sfm(&spiFlash, (uint8_t*) &uint8Spi, sfcb_spi_len(&sfcb));
+		if ( 0 != sfm_state ) {
+			printf("ERROR:%s:spi_flash_model ero=%d\n", __FUNCTION__, sfm_state);
+			goto ERO_END;
+		}
+	}
+	/* compare data */
+	for ( uint32_t i = 0; i < 256; i++ ) {
+		if ( spiFlash.uint8PtrMem[i] != uint8Buf[i] ) {
+			printf("ERROR:%s:sfcb_flash_read: byte=%d, exp=0x%02x, is=0x%02x\n", __FUNCTION__, i, spiFlash.uint8PtrMem[i], uint8Buf[i]);
+			goto ERO_END;
+		}
+	}
 
-	
-	
-	
+
+
 	sfm_dump( &spiFlash, 0, 256 );	// dump SPI flash content
 	sfm_store(&spiFlash, "./flash.dif");	// write to file
 	

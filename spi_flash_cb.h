@@ -311,6 +311,25 @@ int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len);
 
 
 /**
+ *  @brief RAW Read
+ *
+ *  read raw data from flash
+ *
+ *  @param[in,out]  self                handle
+ *  @param[in]      adr            		start address for read
+ *  @param[in,out] 	*data            	pointer to data array with read data
+ *  @param[in]  	len           		size of *data in bytes
+ *  @return         int                	state
+ *  @retval         0                   Request accepted.
+ *  @retval         1                   Worker is busy, wait for processing last job.
+ *  @since          2023-01-05
+ *  @author         Andreas Kaeberlein
+ */
+int sfcb_flash_read (t_sfcb *self, uint32_t adr, void *data, uint16_t len);
+
+
+
+/**
  *  @brief idmax
  *
  *  get maximum id in selected circular buffer queue
