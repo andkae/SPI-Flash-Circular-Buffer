@@ -691,23 +691,23 @@ int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
  *  sfcb_get
  *    inserts element into circular buffer
  */
-int sfcb_get (t_sfcb *self, uint8_t cbID, void *data, uint16_t len, uint16_t lenMax)
-{
-	/* no jobs pending */
-	if ( 0 != self->uint8Busy ) {
-		return 1;	// Worker is busy, wait for processing last job
-	}
-	/* check if CB is init for request */
-	if ( (0 == ((self->ptrCbs)[cbID]).uint8Used) || (0 == ((self->ptrCbs)[cbID]).uint8Init) ) {
-		return 2;	// Circular Buffer is not prepared for adding new element, run #sfcb_worker
-	}
-	/* prepare job */
+// int sfcb_get (t_sfcb *self, uint8_t cbID, void *data, uint16_t len, uint16_t lenMax)
+// {
+	// /* no jobs pending */
+	// if ( 0 != self->uint8Busy ) {
+		// return 1;	// Worker is busy, wait for processing last job
+	// }
+	// /* check if CB is init for request */
+	// if ( (0 == ((self->ptrCbs)[cbID]).uint8Used) || (0 == ((self->ptrCbs)[cbID]).uint8Init) ) {
+		// return 2;	// Circular Buffer is not prepared for adding new element, run #sfcb_worker
+	// }
+	// /* prepare job */
 
 
 
-	/* fine */
-	return 0;
-}
+	// /* fine */
+	// return 0;
+// }
 
 
 
