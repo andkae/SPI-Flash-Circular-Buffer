@@ -46,6 +46,26 @@
 
 
 
+/**
+ *  @defgroup FALL_THROUGH
+ *
+ *  @brief Fallthrough
+ *
+ *  Defines fallthrough only for newer compiler 
+ *  avoids warning 'error: empty declaration __attribute__((fallthrough))'
+ *
+ *  @since  2023-01-07
+ *  @see https://stackoverflow.com/questions/45349079/how-to-use-attribute-fallthrough-correctly-in-gcc
+ */
+#if defined(__GNUC__) && __GNUC__ >= 7
+	#define FALL_THROUGH __attribute__ ((fallthrough))
+#else
+	#define FALL_THROUGH ((void)0)
+#endif /* __GNUC__ >= 7 */
+/** @} */   // FALL_THROUGH
+
+
+
 /** @brief ceildivide
  *
  *  dividing with always rounding up
@@ -208,7 +228,7 @@ void sfcb_worker (t_sfcb *self)
 					}
 					self->uint16SpiLen = 0;	// no data available
 					self->stage = STG01;	// Go one with search for Free Segment
-					__attribute__((fallthrough));	// Go one with next
+					FALL_THROUGH;	// Go one with next
 				/* Find Page for next Circulat buffer element */
 				case STG01:
 					/* Debug message */
@@ -376,8 +396,8 @@ void sfcb_worker (t_sfcb *self)
 						self->uint16SpiLen = 2;
 						return;
 					}
-					self->stage = STG01;			// Go one with search for Free Segment
-					__attribute__((fallthrough));	// Go one with next
+					self->stage = STG01;	// Go one with search for Free Segment
+					FALL_THROUGH;			// Go one with next
 				/* Circular Buffer written, if not write enable */
 				case STG01:
 					sfcb_printf("  INFO:%s:ADD:STG1: Circular Buffer completly written, if not write enable\n", __FUNCTION__);
@@ -462,7 +482,7 @@ void sfcb_worker (t_sfcb *self)
 					}
 					self->uint16SpiLen = 0;	// no data available
 					self->stage = STG01;	// Go one with search for Free Segment
-					__attribute__((fallthrough));	// Go one with stage
+					FALL_THROUGH;			// Go one with stage
 				/* Prepare raw read */
 				case STG01:
 					sfcb_printf("  INFO:%s:RAW:STG1: Prepare RAW read\n", __FUNCTION__);
