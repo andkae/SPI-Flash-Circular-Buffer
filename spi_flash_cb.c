@@ -143,12 +143,12 @@ int sfcb_init (t_sfcb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen
     self->uint8NumCbs = cbLen;
     self->uint16SpiLen = 0;
     self->uint8Busy = 0;
-	self->cmd = IDLE;	// free for request
-	self->stage = STG00;
+	self->cmd = SFCB_CMD_IDLE;	// free for request
+	self->stage = SFCB_STG00;
     self->ptrCbs = (t_sfcb_cb*) cb;		// circular buffer element array
 	self->uint8PtrSpi = (uint8_t*) spi;	// uint8 array
 	self->uint16SpiMax = spiLen;		// max array length
-	self->error = NOERO;
+	self->error = SFCB_E_NOERO;
     self->ptrCbElemPl = NULL;
 	self->uint16CbElemPlSize = 0;
 	/* memory addresses */
@@ -198,7 +198,7 @@ void sfcb_worker (t_sfcb *self)
 		 * nothing todo 
 		 * 
 		 */
-		case IDLE:
+		case SFCB_CMD_IDLE:
 			sfcb_printf("  INFO:%s:IDLE\n", __FUNCTION__);
 			return;
 		/* 
@@ -206,11 +206,11 @@ void sfcb_worker (t_sfcb *self)
 		 * Allocate Next Free Element for Circular Buffers 
 		 * 
 		 */
-		case MKCB:
+		case SFCB_CMD_MKCB:
 			/* select excution state, allows break & cont */
 			switch (self->stage) {
 				/* check for WIP */
-				case STG00:
+				case SFCB_STG00:
 					/* Debug message */
 					sfcb_printf (  "  INFO:%s:MKCB:STG0:check for WIP, uint16SpiLen=%d, uint8PtrSpi[1]=0x%02x\n", 
 					               __FUNCTION__,
@@ -225,11 +225,11 @@ void sfcb_worker (t_sfcb *self)
 						self->uint16SpiLen = 2;
 						return;
 					}
-					self->uint16SpiLen = 0;	// no data available
-					self->stage = STG01;	// Go one with search for Free Segment
+					self->uint16SpiLen = 0;		// no data available
+					self->stage = SFCB_STG01;	// Go one with search for Free Segment
 					FALL_THROUGH;	// Go one with next
 				/* Find Page for next Circulat buffer element */
-				case STG01:
+				case SFCB_STG01:
 					/* Debug message */
 					sfcb_printf("  INFO:%s:MKCB:STG1: find empty page for new element\n", __FUNCTION__);
 					/* check last response */
@@ -315,8 +315,8 @@ void sfcb_worker (t_sfcb *self)
 								/* all active circular buffer queues processed? */
 								if ( 0 == ((self->ptrCbs)[i]).uint8Used ) {
 									self->uint16SpiLen = 0;
-									self->cmd = IDLE;
-									self->stage = STG00;
+									self->cmd = SFCB_CMD_IDLE;
+									self->stage = SFCB_STG00;
 									self->uint8Busy = 0;
 									return;
 								/* active queue found */
@@ -330,8 +330,8 @@ void sfcb_worker (t_sfcb *self)
 							/* all available queues processed, go in idle */
 							if ( !(self->uint8IterCb < self->uint8NumCbs) ) {
 								self->uint16SpiLen = 0;
-								self->cmd = IDLE;
-								self->stage = STG00;
+								self->cmd = SFCB_CMD_IDLE;
+								self->stage = SFCB_STG00;
 								self->uint8Busy = 0;
 								return;
 							}
@@ -339,13 +339,13 @@ void sfcb_worker (t_sfcb *self)
 						} else {
 							self->uint8PtrSpi[0] = SFCB_FLASH_IST_WR_ENA;	// enable write
 							self->uint16SpiLen = 1;
-							self->stage = STG02;
+							self->stage = SFCB_STG02;
 						}
 					}
 					return;	// DONE or SPI transfer is required
 					break;
 				/* Assemble Command for Sector ERASE */	
-				case STG02:
+				case SFCB_STG02:
 					sfcb_printf( "  INFO:%s:MKCB:STG2: Assemble Command for Sector ERASE\n", __FUNCTION__);
 					sfcb_printf( "  INFO:%s:MKCB:STG2: cb=%d, uint32StartPageIdMin=0x%x\n", 
 								 __FUNCTION__, 
@@ -357,11 +357,11 @@ void sfcb_worker (t_sfcb *self)
 					self->uint8PtrSpi[0] = SFCB_FLASH_IST_ERASE_SECTOR;
 					sfcb_adr32_uint8(uint32Temp, self->uint8PtrSpi+1, SFCB_FLASH_TOPO_ADR_BYTE);	// +1 first byte is instruction
 					self->uint16SpiLen = SFCB_FLASH_TOPO_ADR_BYTE + 1;	// address + instruction
-					self->stage = STG03;
+					self->stage = SFCB_STG03;
 					return;	// DONE or SPI transfer is required
 					break;
 				/* Wait for Sector Erase */	
-				case STG03:
+				case SFCB_STG03:
 					sfcb_printf("  INFO:%s:MKCB:STG3: Wait for Sector Erase\n", __FUNCTION__);
 					/* Start at zero Element with search for free page */
 					self->uint16IterElem = 0;
@@ -369,7 +369,7 @@ void sfcb_worker (t_sfcb *self)
 					self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_STATE_REG;
 					self->uint8PtrSpi[1] = 0;
 					self->uint16SpiLen = 2;
-					self->stage = STG00;	// wait for erase, and search for free page for next element
+					self->stage = SFCB_STG00;	// wait for erase, and search for free page for next element
 					return;	// DONE or SPI transfer is required
 					break;				
 				/* something strange happend */
@@ -383,10 +383,10 @@ void sfcb_worker (t_sfcb *self)
 		 * Add New Element to Circular Buffer
 		 * 
 		 */
-		case ADD:
+		case SFCB_CMD_ADD:
 			switch (self->stage) {
 				/* check for WIP */
-				case STG00:
+				case SFCB_STG00:
 					sfcb_printf("  INFO:%s:ADD:STG0: check for WIP\n", __FUNCTION__);
 					if ( (0 == self->uint16SpiLen) || (0 != (self->uint8PtrSpi[1] & SFCB_FLASH_MNG_WIP_MSK)) ) {
 						/* First Request or WIP */
@@ -395,29 +395,29 @@ void sfcb_worker (t_sfcb *self)
 						self->uint16SpiLen = 2;
 						return;
 					}
-					self->stage = STG01;	// Go one with search for Free Segment
-					FALL_THROUGH;			// Go one with next
+					self->stage = SFCB_STG01;	// Go one with search for Free Segment
+					FALL_THROUGH;				// Go one with next
 				/* Circular Buffer written, if not write enable */
-				case STG01:
+				case SFCB_STG01:
 					sfcb_printf("  INFO:%s:ADD:STG1: Circular Buffer completly written, if not write enable\n", __FUNCTION__);
 					/* Page Requested to program */
 					if ( self->uint16IterElem < self->uint16CbElemPlSize ) {
 						/* enable WRITE Latch */
 						self->uint8PtrSpi[0] = SFCB_FLASH_IST_WR_ENA;	// uint8FlashIstWrEnable
 						self->uint16SpiLen = 1;
-						self->stage = STG02;	// Page Write as next
+						self->stage = SFCB_STG02;	// Page Write as next
 						return;
 					/* circular buffer written */
 					} else {
 						self->uint16SpiLen = 0;
-						self->cmd = IDLE;
-						self->stage = STG00;
+						self->cmd = SFCB_CMD_IDLE;
+						self->stage = SFCB_STG00;
 						self->uint8Busy = 0;
 						return;
 					}
 					break;
 				/* Page Write to Circular Buffer */
-				case STG02:
+				case SFCB_STG02:
 					sfcb_printf("  INFO:%s:ADD:STG2: Page Write to Circular Buffer, adr=0x%x\n", __FUNCTION__, self->uint32IterPage);
 					/* assemble Flash Instruction packet */
 					self->uint8PtrSpi[0] = SFCB_FLASH_IST_WR_PAGE;	// write page
@@ -446,7 +446,7 @@ void sfcb_worker (t_sfcb *self)
 					/* increment iterators */
 					(self->uint32IterPage)++;
 					/* Go to wait WIP */
-					self->stage = STG00;
+					self->stage = SFCB_STG00;
 					return;
 					break;
 				/* something strange happend */
@@ -467,10 +467,10 @@ void sfcb_worker (t_sfcb *self)
 		 * Raw Flash Read
 		 * 
 		 */
-		case RAW:
+		case SFCB_CMD_RAW:
 			switch (self->stage) {
 				/* check for WIP */
-				case STG00:
+				case SFCB_STG00:
 					sfcb_printf("  INFO:%s:RAW:STG0: check for WIP\n", __FUNCTION__);
 					if ( (0 == self->uint16SpiLen) || (0 != (self->uint8PtrSpi[1] & SFCB_FLASH_MNG_WIP_MSK)) ) {
 						/* First Request or WIP */
@@ -479,18 +479,18 @@ void sfcb_worker (t_sfcb *self)
 						self->uint16SpiLen = 2;
 						return;
 					}
-					self->uint16SpiLen = 0;	// no data available
-					self->stage = STG01;	// Go one with search for Free Segment
-					FALL_THROUGH;			// Go one with stage
+					self->uint16SpiLen = 0;		// no data available
+					self->stage = SFCB_STG01;	// Go one with search for Free Segment
+					FALL_THROUGH;				// Go one with stage
 				/* Prepare raw read */
-				case STG01:
+				case SFCB_STG01:
 					sfcb_printf("  INFO:%s:RAW:STG1: Prepare RAW read\n", __FUNCTION__);
 					/* check for enough spi buf */
 					if ( self->uint16SpiMax < (self->uint16CbElemPlSize + SFCB_FLASH_TOPO_ADR_BYTE + 1) ) {	// IST (+1) + ADR_BYTE: caused by read instruction
 						self->uint8Busy = 0;
-						self->cmd = IDLE;		// go in idle
-						self->stage = STG00;
-						self->error = BUFSIZE;	// requested operation ends with an error
+						self->cmd = SFCB_CMD_IDLE;	// go in idle
+						self->stage = SFCB_STG00;
+						self->error = SFCB_E_BUFSIZE;	// requested operation ends with an error
 					}
 					/* SPI package is zero */
 					self->uint16SpiLen = (uint16_t) (self->uint16CbElemPlSize + SFCB_FLASH_TOPO_ADR_BYTE + 1);	// +1: for instruction
@@ -499,15 +499,15 @@ void sfcb_worker (t_sfcb *self)
 					self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_DATA;	// read data
 					sfcb_adr32_uint8(self->uint32IterPage, self->uint8PtrSpi+1, SFCB_FLASH_TOPO_ADR_BYTE);	// +1 first byte is instruction
 					/* go on with next stage */
-					self->stage = STG02;	// now wait for transfer
+					self->stage = SFCB_STG02;	// now wait for transfer
 					return;
 				/* copy data from SPI back */
-				case STG02:
+				case SFCB_STG02:
 					sfcb_printf("  INFO:%s:RAW:STG2: copy data from SPI back\n", __FUNCTION__);
 					memcpy(self->ptrCbElemPl, self->uint8PtrSpi+SFCB_FLASH_TOPO_ADR_BYTE+1, self->uint16CbElemPlSize);	// skip header from answer of read instruction
 					self->uint16SpiLen = 0;
-					self->cmd = IDLE;
-					self->stage = STG00;
+					self->cmd = SFCB_CMD_IDLE;
+					self->stage = SFCB_STG00;
 					self->uint8Busy = 0;
 					return;
 				/* something strange happend */
@@ -659,10 +659,10 @@ int sfcb_mkcb (t_sfcb *self)
 		}
 	}
 	/* Setup new Job */
-	self->cmd = MKCB;
+	self->cmd = SFCB_CMD_MKCB;
 	self->uint16IterElem = 0;
-	self->stage = STG00;
-	self->error = NOERO;
+	self->stage = SFCB_STG00;
+	self->error = SFCB_E_NOERO;
 	self->uint8Busy = 1;
 	/* fine */
 	return 0;
@@ -697,9 +697,9 @@ int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
 	self->uint16IterElem = 0;	// used as ptrCbElemPl written pointer
 	/* Setup new Job */
 	self->uint8Busy = 1;
-	self->cmd = ADD;
-	self->stage = STG00;
-	self->error = NOERO;
+	self->cmd = SFCB_CMD_ADD;
+	self->stage = SFCB_STG00;
+	self->error = SFCB_E_NOERO;
 	/* fine */
 	return 0;
 }
@@ -746,9 +746,9 @@ int sfcb_flash_read (t_sfcb *self, uint32_t adr, void *data, uint16_t len)
 	self->uint32IterPage = adr;	// Flash RAW address
 	/* Setup new Job */
 	self->uint8Busy = 1;
-	self->cmd = RAW;	// RAW read from Flash
-	self->stage = STG00;
-	self->error = NOERO;
+	self->cmd = SFCB_CMD_RAW;	// RAW read from Flash
+	self->stage = SFCB_STG00;
+	self->error = SFCB_E_NOERO;
 	/* fine */
 	return 0;
 }
