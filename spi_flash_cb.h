@@ -98,7 +98,8 @@ typedef enum
  *
  *  @brief  circular buffer element head
  *
- *  Header to mark the start of an circular buffer element.
+ *  Header to mark the start of an circular buffer element
+ *  takes place in SPI Flash
  *
  *  @since  2022-07-22
  *  @author Andreas Kaeberlein
@@ -125,8 +126,8 @@ typedef struct spi_flash_cb_elem_head
  */
 typedef struct t_sfcb_cb
 {
-    uint8_t     uint8Used;                  /**< Entry is used */
-    uint8_t     uint8Init;                  /**< Data structure initialized */
+    uint8_t     uint8Used;                  /**< Managment slot in #t_sfcb_cb table is used, try next index */
+    uint8_t     uint8Init;                  /**< Entry in management table is valid/invalid. In case of invalid run #sfcb_worker to update the management info in this entry */
     uint32_t    uint32MagicNum;             /**< Magic Number for marking valid block */
     uint32_t    uint32IdNumMax;             /**< Contents highest elment number in logical circular buffer. Circular buffer elements are ascending numbered starting at zero */
     uint32_t    uint32IdNumMin;             /**< lowest element number in circular buffer */

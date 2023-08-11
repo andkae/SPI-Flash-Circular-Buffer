@@ -236,7 +236,7 @@ void sfcb_worker (t_sfcb *self)
 					if ( 0 != self->uint16SpiLen ) {
 						/* Debug Message */
 						sfcb_printf("  INFO:%s:MKCB:STG1: SPI ", __FUNCTION__);
-						for ( uint8_t i = 0; i < 12; i++ ) {
+						for ( uint8_t i = 0; i < (uint8_t) (sizeof(spi_flash_cb_elem_head) + SFCB_FLASH_TOPO_ADR_BYTE + 1); i++ ) {	// +1: SPI Flash IST
 							sfcb_printf("0x%x ", self->uint8PtrSpi[i]);
 						}
 						sfcb_printf("\n");
@@ -451,7 +451,7 @@ void sfcb_worker (t_sfcb *self)
 					break;
 				/* something strange happend */
 				default:
-					sfcb_printf("  ERROR:%s:ADD: unexpected use of default path\n", __FUNCTION__);
+					sfcb_printf("  ERROR:%s:ADD: default, something strange happend\n", __FUNCTION__);
 					break;
 			}
 			break;
@@ -690,7 +690,7 @@ int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
 	}
 	/* store information for insertion */
 	self->uint8IterCb = cbID;	// used as pointer to queue
-	((self->ptrCbs)[self->uint8IterCb]).uint8Init = 0;	// mark as dirty, for next write run #sfcb_mkcb
+	((self->ptrCbs)[self->uint8IterCb]).uint8Init = 0;	// mark queue as dirty, for next write run #sfcb_mkcb
 	self->uint32IterPage = ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageWrite;	// select page to write
 	self->ptrCbElemPl = data;
 	self->uint16CbElemPlSize = len;
@@ -710,7 +710,7 @@ int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
  *  sfcb_get
  *    inserts element into circular buffer
  */
-// int sfcb_get (t_sfcb *self, uint8_t cbID, void *data, uint16_t len, uint16_t lenMax)
+// int sfcb_get (t_sfcb *self, uint8_t cbID, void *data, uint16_t lenMax)
 // {
 	// /* no jobs pending */
 	// if ( 0 != self->uint8Busy ) {
