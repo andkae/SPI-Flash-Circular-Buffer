@@ -100,8 +100,8 @@ int main ()
 			printf("ERROR:%s:sfcb_init:uint8Used", __FUNCTION__);
 			goto ERO_END;
 		}
-		if ( 0 != (sfcb_cb[i]).uint8Init) {
-			printf("ERROR:%s:sfcb_init:uint8Init", __FUNCTION__);
+		if ( 0 != (sfcb_cb[i]).uint8MgmtValid) {
+			printf("ERROR:%s:sfcb_init:uint8MgmtValid", __FUNCTION__);
 			goto ERO_END;
 		}
 	}

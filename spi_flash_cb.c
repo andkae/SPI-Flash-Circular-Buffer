@@ -161,10 +161,10 @@ int sfcb_init (t_sfcb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen
 	/* init circular buffer handles */
 	for ( uint8_t i = 0; i < (self->uint8NumCbs); i++ ) {
 		(self->ptrCbs[i]).uint8Used = 0;
-		(self->ptrCbs[i]).uint8Init = 0;
-		sfcb_printf("  INFO:%s:ptrCbs[%i]_p           = %p\n", __FUNCTION__, i, (&self->ptrCbs[i]));				// unit test output
-		sfcb_printf("  INFO:%s:ptrCbs[%i].uint8Used_p = %p\n", __FUNCTION__, i, &((self->ptrCbs[i]).uint8Used));	// output address
-		sfcb_printf("  INFO:%s:ptrCbs[%i].uint8Init_p = %p\n", __FUNCTION__, i, &((self->ptrCbs[i]).uint8Init));	// output address
+		(self->ptrCbs[i]).uint8MgmtValid = 0;
+		sfcb_printf("  INFO:%s:ptrCbs[%i]_p           = %p\n", __FUNCTION__, i, (&self->ptrCbs[i]));					// unit test output
+		sfcb_printf("  INFO:%s:ptrCbs[%i].uint8Used_p = %p\n", __FUNCTION__, i, &((self->ptrCbs[i]).uint8Used));		// output address
+		sfcb_printf("  INFO:%s:ptrCbs[%i].uint8Init_p = %p\n", __FUNCTION__, i, &((self->ptrCbs[i]).uint8MgmtValid));	// output address
 	}
 	/* normal end */
 	return 0;
@@ -263,7 +263,7 @@ void sfcb_worker (t_sfcb *self)
 							/* check for unused header 
 							 * first unused pages is alocated, iterate over all elements to get all IDs
 							 */
-							if ( 0 == ((self->ptrCbs)[self->uint8IterCb]).uint8Init ) {
+							if ( 0 == ((self->ptrCbs)[self->uint8IterCb]).uint8MgmtValid ) {
 								uint8Good = 1;
 								for ( uint8_t i = SFCB_FLASH_TOPO_ADR_BYTE + 1; i < SFCB_FLASH_TOPO_ADR_BYTE + 1 + sizeof(spi_flash_cb_elem_head); i++ ) {	// +1: IST
 									/* corrupted empty page found, leave as it is */
@@ -276,7 +276,7 @@ void sfcb_worker (t_sfcb *self)
 								/* save page number for next circular buffer entry */
 								if ( 0 != uint8Good ) {
 									((self->ptrCbs)[self->uint8IterCb]).uint32StartPageWrite = self->uint32IterPage;	
-									((self->ptrCbs)[self->uint8IterCb]).uint8Init = 1;	// prepared for writing next element
+									((self->ptrCbs)[self->uint8IterCb]).uint8MgmtValid = 1;	// prepared for writing next element
 								}
 							}
 						}
@@ -306,7 +306,7 @@ void sfcb_worker (t_sfcb *self)
 						(self->uint16IterElem)++;
 					} else {
 						/* Free Page Found */
-						if ( 0 != ((self->ptrCbs)[self->uint8IterCb]).uint8Init) {
+						if ( 0 != ((self->ptrCbs)[self->uint8IterCb]).uint8MgmtValid) {
 							/* prepare for next queue */
 							self->uint16IterElem = 0;	// reset element counter
 							(self->uint8IterCb)++;		// process next queue
@@ -321,7 +321,7 @@ void sfcb_worker (t_sfcb *self)
 									return;
 								/* active queue found */
 								} else {
-									if ( 0 == ((self->ptrCbs)[i]).uint8Init ) {
+									if ( 0 == ((self->ptrCbs)[i]).uint8MgmtValid ) {
 										self->uint8IterCb = i;	// search for unintializied queue, in case of only on circular buffer needes to rebuild
 										break;
 									}
@@ -641,7 +641,7 @@ int sfcb_mkcb (t_sfcb *self)
 	/* Find first queue which needs an build */
 	self->uint8IterCb = 0;
 	for ( uint8_t i=0; i<self->uint8NumCbs; i++ ) {
-		if ( (0 == ((self->ptrCbs)[i]).uint8Used) || (0 == ((self->ptrCbs)[i]).uint8Init) ) {
+		if ( (0 == ((self->ptrCbs)[i]).uint8Used) || (0 == ((self->ptrCbs)[i]).uint8MgmtValid) ) {
 			break;
 		}
 		self->uint8IterCb = i;	// search for unintializied queue, in case of only on circular buffer needes to rebuild
@@ -653,7 +653,7 @@ int sfcb_mkcb (t_sfcb *self)
 			break;
 		}
 		/* dirty buffer, needs to rebuild absoulte idmin/idmax for next write, otherwise will the last written element deleted */
-		if ( 0 == ((self->ptrCbs)[self->uint8IterCb]).uint8Init ) {	
+		if ( 0 == ((self->ptrCbs)[self->uint8IterCb]).uint8MgmtValid ) {	
 			(self->ptrCbs[i]).uint32IdNumMax = 0;				// in case of uninitialized memory
 			(self->ptrCbs[i]).uint32IdNumMin = (uint32_t) (~0);	// assign highest number
 		}
@@ -681,7 +681,7 @@ int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
 		return 1;	// Worker is busy, wait for processing last job
 	}
 	/* check if CB is init for request */
-	if ( (0 == ((self->ptrCbs)[cbID]).uint8Used) || (0 == ((self->ptrCbs)[cbID]).uint8Init) ) {
+	if ( (0 == ((self->ptrCbs)[cbID]).uint8Used) || (0 == ((self->ptrCbs)[cbID]).uint8MgmtValid) ) {
 		return 2;	// Circular Buffer is not prepared for adding new element, run #sfcb_worker
 	}
 	/* check for match into circular buffer size */
@@ -690,7 +690,7 @@ int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
 	}
 	/* store information for insertion */
 	self->uint8IterCb = cbID;	// used as pointer to queue
-	((self->ptrCbs)[self->uint8IterCb]).uint8Init = 0;	// mark queue as dirty, for next write run #sfcb_mkcb
+	((self->ptrCbs)[self->uint8IterCb]).uint8MgmtValid = 0;	// mark queue as dirty, for next write run #sfcb_mkcb
 	self->uint32IterPage = ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageWrite;	// select page to write
 	self->ptrCbElemPl = data;
 	self->uint16CbElemPlSize = len;
@@ -710,23 +710,23 @@ int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
  *  sfcb_get
  *    inserts element into circular buffer
  */
-// int sfcb_get (t_sfcb *self, uint8_t cbID, void *data, uint16_t lenMax)
-// {
-	// /* no jobs pending */
-	// if ( 0 != self->uint8Busy ) {
-		// return 1;	// Worker is busy, wait for processing last job
-	// }
-	// /* check if CB is init for request */
-	// if ( (0 == ((self->ptrCbs)[cbID]).uint8Used) || (0 == ((self->ptrCbs)[cbID]).uint8Init) ) {
-		// return 2;	// Circular Buffer is not prepared for adding new element, run #sfcb_worker
-	// }
-	// /* prepare job */
+int sfcb_get (t_sfcb *self, uint8_t cbID, void *data, uint16_t lenMax)
+{
+	/* no jobs pending */
+	if ( 0 != self->uint8Busy ) {
+		return 1;	// Worker is busy, wait for processing last job
+	}
+	/* check if CB is init for request */
+	if ( (0 == ((self->ptrCbs)[cbID]).uint8Used) || (0 == ((self->ptrCbs)[cbID]).uint8MgmtValid) ) {
+		return 2;	// Circular Buffer is not prepared for reading element, run #sfcb_worker
+	}
+	/* prepare job */
 
 
 
-	// /* fine */
-	// return 0;
-// }
+	/* fine */
+	return 0;
+}
 
 
 
