@@ -1,6 +1,6 @@
 /***********************************************************************
  @copyright     : Siemens AG
- @license       : Siemens Inner Source License 1.4
+ @license       : BSDv3
  @author        : Andreas Kaeberlein
  @address       : Clemens-Winkler-Strasse 3, 09116 Chemnitz
 
@@ -39,7 +39,6 @@
     #include <stdio.h>	// allow outputs in unit test
 	#define sfcb_printf(...) printf(__VA_ARGS__)
 #else
-    //#define sfcb_printf(...) neorv32_uart0_printf(__VA_ARGS__)
 	#define sfcb_printf(...)
 #endif
 /** @} */   // DEBUG
@@ -419,7 +418,7 @@ void sfcb_worker (t_sfcb *self)
 					break;
 				/* Page Write to Circular Buffer */
 				case STG02:
-					sfcb_printf("  INFO:%s:ADD:STG2: Page Write to Circular Buffer\n", __FUNCTION__);
+					sfcb_printf("  INFO:%s:ADD:STG2: Page Write to Circular Buffer, adr=0x%x\n", __FUNCTION__, self->uint32IterPage);
 					/* assemble Flash Instruction packet */
 					self->uint8PtrSpi[0] = SFCB_FLASH_IST_WR_PAGE;	// write page
 					sfcb_adr32_uint8(self->uint32IterPage, self->uint8PtrSpi+1, SFCB_FLASH_TOPO_ADR_BYTE);	// +1 first byte is instruction
