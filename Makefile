@@ -1,18 +1,18 @@
 # **********************************************************************
-#  @copyright	: Siemens AG
-#  @license		: Siemens Inner Source License 1.4
-#  @author		: Andreas Kaeberlein
-#  @address		: Clemens-Winkler-Strasse 3, 09116 Chemnitz
+#  @copyright   : Siemens AG
+#  @license     : BSDv3
+#  @author      : Andreas Kaeberlein
+#  @address     : Clemens-Winkler-Strasse 3, 09116 Chemnitz
 #
-#  @maintainer	: Andreas Kaeberlein
-#  @telephone	: +49 371 4810-2108
-#  @email		: andreas.kaeberlein@siemens.com
+#  @maintainer  : Andreas Kaeberlein
+#  @telephone   : +49 371 4810-2108
+#  @email       : andreas.kaeberlein@siemens.com
 #
-#  @file		: Makefile
-#  @date		: 2022-12-13
+#  @file        : Makefile
+#  @date        : 2022-12-13
 #
-#  @brief		: Build
-#				  builds sources with all dependencies
+#  @brief       : Build
+#                 builds sources with all dependencies
 # **********************************************************************
 
 
