@@ -1,6 +1,6 @@
 /***********************************************************************
  @copyright     : Siemens AG
- @license       : GPLv3
+ @license       : BSDv3
  @author        : Andreas Kaeberlein
  @address       : Clemens-Winkler-Strasse 3, 09116 Chemnitz
 
