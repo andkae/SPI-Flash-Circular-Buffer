@@ -156,7 +156,7 @@ int sfcb_init (t_sfcb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen
 	/* SPI buffer needs at least space for one page and address and instruction */
 	if ( (SFCB_FLASH_TOPO_PAGE_SIZE + SFCB_FLASH_TOPO_ADR_BYTE + 1) > self->uint16SpiMax ) {
 		sfcb_printf("  ERROR:%s: spi buffer to small, is=%d byte, req=%d byte\n", __FUNCTION__, self->uint16SpiMax, SFCB_FLASH_TOPO_PAGE_SIZE + SFCB_FLASH_TOPO_ADR_BYTE + 1);
-		return SFCB_E_BUF;	// not enough SPI buffer to write at least one complete page to flash
+		return SFCB_E_MEM;	// not enough SPI buffer to write at least one complete page to flash
 	}
 	/* init circular buffer handles */
 	for ( uint8_t i = 0; i < (self->uint8NumCbs); i++ ) {
@@ -563,7 +563,7 @@ int sfcb_new_cb (t_sfcb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_
 	}
 	if ( cbNew == (self->uint8NumCbs) ) {
 		sfcb_printf("  ERROR:%s:sfcb_cb exceeded total available number of %i cbs\n", __FUNCTION__, (self->uint8NumCbs));
-		return SFCB_E_CB_Q_MEM;	// no free circular buffer slots
+		return SFCB_E_MEM;	// no free circular buffer slots, allocate more memory in #t_sfcb_cb table 
 	}	
 	/* prepare slot */
 	(self->ptrCbs[cbNew]).uint8Used = 1;		// occupied
@@ -631,11 +631,13 @@ int sfcb_mkcb (t_sfcb *self)
 	sfcb_printf("  INFO:%s:sfcb_p = %p\n", __FUNCTION__, self);
 	/* no jobs pending */
 	if ( 0 != self->uint8Busy ) {
+		sfcb_printf("  ERROR:%s: Worker is busy\n", __FUNCTION__);
 		return SFCB_E_WKR_BSY;	// busy
 	}
 	/* check for at least one active queue */
 	if ( 0 == ((self->ptrCbs)[0]).uint8Used ) {
-		return SFCB_E_NO_CB_Q;	// no active queue
+		sfcb_printf("  ERROR:%s: Circular buffer queue not active or present\n", __FUNCTION__);
+		return SFCB_E_NO_CB_Q;	// circular buffer queue not active
 	}
 	/* Find first queue which needs an build */
 	self->uint8IterCb = 0;
@@ -643,7 +645,7 @@ int sfcb_mkcb (t_sfcb *self)
 		if ( (0 == ((self->ptrCbs)[i]).uint8Used) || (0 == ((self->ptrCbs)[i]).uint8MgmtValid) ) {
 			break;
 		}
-		self->uint8IterCb = i;	// search for queue with uninitialized or unvalid managment data, in case of only on circular buffer needes to rebuild
+		self->uint8IterCb = i;	// search for queue with uninitialized or invalid managment data, in case of only on circular buffer needes to rebuild
 	}
 	/* reset idmin/idmax counter to enable select of correct page to erase */
 	for ( uint8_t i = 0; i < (self->uint8NumCbs); i++ ) {
@@ -664,7 +666,7 @@ int sfcb_mkcb (t_sfcb *self)
 	self->error = SFCB_E_NOERO;
 	self->uint8Busy = 1;
 	/* fine */
-	return 0;
+	return SFCB_OK;
 }
 
 
@@ -677,15 +679,22 @@ int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
 {	
 	/* no jobs pending */
 	if ( 0 != self->uint8Busy ) {
-		return 1;	// Worker is busy, wait for processing last job
+		sfcb_printf("  ERROR:%s: Worker is busy\n", __FUNCTION__);
+		return SFCB_E_WKR_BSY;	// Worker is busy, wait for processing last job
+	}
+	if ( !(cbID < self->uint8NumCbs) ) {
+		sfcb_printf("  ERROR:%s: Circular buffer queue not active or present\n", __FUNCTION__);
+		return SFCB_E_NO_CB_Q;	// circular buffer queue not present
 	}
 	/* check if CB is init for request */
 	if ( (0 == ((self->ptrCbs)[cbID]).uint8Used) || (0 == ((self->ptrCbs)[cbID]).uint8MgmtValid) ) {
-		return 2;	// Circular Buffer is not prepared for adding new element, run #sfcb_worker
+		sfcb_printf("  ERROR:%s: Circular Buffer is not prepared for request\n", __FUNCTION__);
+		return SFCB_E_WKR_REQ;	// Circular Buffer is not prepared for adding new element, run #sfcb_worker
 	}
 	/* check for match into circular buffer size */
 	if ( len > (((self->ptrCbs)[cbID]).uint16NumPagesPerElem * SFCB_FLASH_TOPO_PAGE_SIZE) ) {
-		return 4;	// data segement is larger then reserved circular buffer space
+		sfcb_printf("  ERROR:%s: data segement is larger then reserved circular buffer space\n", __FUNCTION__);
+		return SFCB_E_MEM;	// data segement is larger then reserved circular buffer space
 	}
 	/* store information for insertion */
 	self->uint8IterCb = cbID;	// used as pointer to queue
@@ -713,13 +722,26 @@ int sfcb_get (t_sfcb *self, uint8_t cbID, void *data, uint16_t lenMax)
 {
 	/* no jobs pending */
 	if ( 0 != self->uint8Busy ) {
+		sfcb_printf("  ERROR:%s: Worker is busy\n", __FUNCTION__);
 		return SFCB_E_WKR_BSY;	// Worker is busy, wait for processing last job
+	}
+	/* check if CB queue is available */
+	if ( !(cbID < self->uint8NumCbs) ) {
+		sfcb_printf("  ERROR:%s: Circular buffer queue not active or present\n", __FUNCTION__);
+		return SFCB_E_NO_CB_Q;	// circular buffer queue not present
 	}
 	/* check if CB is init for request */
 	if ( (0 == ((self->ptrCbs)[cbID]).uint8Used) || (0 == ((self->ptrCbs)[cbID]).uint8MgmtValid) ) {
+		sfcb_printf("  ERROR:%s: Circular Buffer is not prepared for request\n", __FUNCTION__);
 		return SFCB_E_WKR_REQ;	// Circular Buffer is not prepared for reading element, run #sfcb_worker
 	}
 	/* check for enough data */
+	if (lenMax < ((self->ptrCbs[cbID]).uint16NumPagesPerElem * SFCB_FLASH_TOPO_PAGE_SIZE) ) {
+		sfcb_printf("  ERROR:%s: data buffer to small for circular buffer element\n", __FUNCTION__);
+		return SFCB_E_MEM;	// data buffer to small for circular buffer element
+	}
+	/* determine start sector */
+	
 
 
 
