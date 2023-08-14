@@ -21,6 +21,22 @@
 #define __SPI_FLASH_CB_H
 
 
+/**
+ *  @defgroup SFCB_E
+ *  function exit codes
+ *  @{
+ */
+#define SFCB_OK             (0)     /**< Function ends with okay */
+#define SFCB_E_NO_FLASH     (1<<0)  /**< no flash type selected, use proper compile switch */
+#define SFCB_E_BUF          (1<<1)  /**< not enough buffer to perform the desired interaction */
+#define SFCB_E_CB_Q_MEM     (1<<2)  /**< no free circular buffer slots, allocate more memory in #t_sfcb_cb table */
+#define SFCB_E_FLASH_FULL   (1<<3)  /**< Flash capacity exceeded */
+#define SFCB_E_WKR_BSY      (1<<4)  /**< Worker is Busy */
+#define SFCB_E_NO_CB_Q      (1<<5)  /**< no active queue */
+#define SFCB_E_WKR_REQ      (1<<6)  /**< Circular Buffer is not prepared for reading element, run #sfcb_worker */
+/** @} */   // SFCB_E
+
+
 
 /* C++ compatibility */
 #ifdef __cplusplus

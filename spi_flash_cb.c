@@ -135,7 +135,7 @@ int sfcb_init (t_sfcb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen
 	/* check if provided flash type is valid */
     if ( 0 == (sizeof(SFCB_FLASH_NAME) - 1) ) {
 		sfcb_printf("  ERROR:%s: no flash type selected\n", __FUNCTION__);
-		return 1;	// no flash type selected, use proper compile switch
+		return SFCB_E_NO_FLASH;	// no flash type selected, use proper compile switch
 	}		
 	sfcb_printf("  INFO:%s: flash '%s' selected\n", __FUNCTION__, SFCB_FLASH_NAME);
     /* set up list of flash circular buffers */
@@ -156,7 +156,7 @@ int sfcb_init (t_sfcb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen
 	/* SPI buffer needs at least space for one page and address and instruction */
 	if ( (SFCB_FLASH_TOPO_PAGE_SIZE + SFCB_FLASH_TOPO_ADR_BYTE + 1) > self->uint16SpiMax ) {
 		sfcb_printf("  ERROR:%s: spi buffer to small, is=%d byte, req=%d byte\n", __FUNCTION__, self->uint16SpiMax, SFCB_FLASH_TOPO_PAGE_SIZE + SFCB_FLASH_TOPO_ADR_BYTE + 1);
-		return 2;	// not enough SPI buffer to write at least one complete page to flash
+		return SFCB_E_BUF;	// not enough SPI buffer to write at least one complete page to flash
 	}
 	/* init circular buffer handles */
 	for ( uint8_t i = 0; i < (self->uint8NumCbs); i++ ) {
@@ -167,7 +167,7 @@ int sfcb_init (t_sfcb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen
 		sfcb_printf("  INFO:%s:ptrCbs[%i].uint8Init_p = %p\n", __FUNCTION__, i, &((self->ptrCbs[i]).uint8MgmtValid));	// output address
 	}
 	/* normal end */
-	return 0;
+	return SFCB_OK;
 }
 
 
@@ -549,7 +549,6 @@ int sfcb_new_cb (t_sfcb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_
 	uint32_t		uint32StartSector;
 	uint16_t		uint16NumSectors;
 	
-	
     /* Function call message */
 	sfcb_printf("__FUNCTION__ = %s\n", __FUNCTION__);
 	sfcb_printf("  INFO:%s:sfcb_p = %p\n", __FUNCTION__, self);
@@ -564,7 +563,7 @@ int sfcb_new_cb (t_sfcb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_
 	}
 	if ( cbNew == (self->uint8NumCbs) ) {
 		sfcb_printf("  ERROR:%s:sfcb_cb exceeded total available number of %i cbs\n", __FUNCTION__, (self->uint8NumCbs));
-		return 1;	// no free circular buffer slots
+		return SFCB_E_CB_Q_MEM;	// no free circular buffer slots
 	}	
 	/* prepare slot */
 	(self->ptrCbs[cbNew]).uint8Used = 1;		// occupied
@@ -581,7 +580,7 @@ int sfcb_new_cb (t_sfcb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_
 	/* check if stop sector is in total size */
 	if ( ((self->ptrCbs[cbNew]).uint32StopSector+1) * SFCB_FLASH_TOPO_SECTOR_SIZE > SFCB_FLASH_TOPO_FLASH_SIZE ) {
 		sfcb_printf("  ERROR:%s flash size exceeded\n", __FUNCTION__);
-		return 2;	// Flash capacity exceeded
+		return SFCB_E_FLASH_FULL;	// Flash capacity exceeded
 	}
 	/* print slot config */
 	sfcb_printf("  INFO:%s:ptrCbs[%i]_p                     = %p\n",   __FUNCTION__, cbNew, (&self->ptrCbs[cbNew]));
@@ -591,7 +590,7 @@ int sfcb_new_cb (t_sfcb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_
 	sfcb_printf("  INFO:%s:ptrCbs[%i].uint32StopSector      = 0x%x\n", __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint32StopSector);
 	sfcb_printf("  INFO:%s:ptrCbs[%i].uint16NumEntriesMax   = %d\n",   __FUNCTION__, cbNew, (self->ptrCbs[cbNew]).uint16NumEntriesMax);
 	/* succesfull */
-	return 0;
+	return SFCB_OK;
 }
 
 
@@ -603,7 +602,7 @@ int sfcb_new_cb (t_sfcb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_
 int sfcb_busy (t_sfcb *self)
 {
 	if ( 0 != self->uint8Busy ) {
-		return 1;	// busy
+		return -1;	// busy
 	}
 	return 0;	
 }
@@ -632,11 +631,11 @@ int sfcb_mkcb (t_sfcb *self)
 	sfcb_printf("  INFO:%s:sfcb_p = %p\n", __FUNCTION__, self);
 	/* no jobs pending */
 	if ( 0 != self->uint8Busy ) {
-		return 1;	// busy
+		return SFCB_E_WKR_BSY;	// busy
 	}
 	/* check for at least one active queue */
 	if ( 0 == ((self->ptrCbs)[0]).uint8Used ) {
-		return 2;	// no active queue
+		return SFCB_E_NO_CB_Q;	// no active queue
 	}
 	/* Find first queue which needs an build */
 	self->uint8IterCb = 0;
@@ -644,7 +643,7 @@ int sfcb_mkcb (t_sfcb *self)
 		if ( (0 == ((self->ptrCbs)[i]).uint8Used) || (0 == ((self->ptrCbs)[i]).uint8MgmtValid) ) {
 			break;
 		}
-		self->uint8IterCb = i;	// search for unintializied queue, in case of only on circular buffer needes to rebuild
+		self->uint8IterCb = i;	// search for queue with uninitialized or unvalid managment data, in case of only on circular buffer needes to rebuild
 	}
 	/* reset idmin/idmax counter to enable select of correct page to erase */
 	for ( uint8_t i = 0; i < (self->uint8NumCbs); i++ ) {
@@ -714,13 +713,13 @@ int sfcb_get (t_sfcb *self, uint8_t cbID, void *data, uint16_t lenMax)
 {
 	/* no jobs pending */
 	if ( 0 != self->uint8Busy ) {
-		return 1;	// Worker is busy, wait for processing last job
+		return SFCB_E_WKR_BSY;	// Worker is busy, wait for processing last job
 	}
 	/* check if CB is init for request */
 	if ( (0 == ((self->ptrCbs)[cbID]).uint8Used) || (0 == ((self->ptrCbs)[cbID]).uint8MgmtValid) ) {
-		return 2;	// Circular Buffer is not prepared for reading element, run #sfcb_worker
+		return SFCB_E_WKR_REQ;	// Circular Buffer is not prepared for reading element, run #sfcb_worker
 	}
-	/* prepare job */
+	/* check for enough data */
 
 
 
@@ -738,7 +737,7 @@ int sfcb_flash_read (t_sfcb *self, uint32_t adr, void *data, uint16_t len)
 {
 	/* no jobs pending */
 	if ( 0 != self->uint8Busy ) {
-		return 1;	// Worker is busy, wait for processing last job
+		return SFCB_E_WKR_BSY;	// Worker is busy, wait for processing last job
 	}
 	/* prepare job */
 	self->ptrCbElemPl = data;
