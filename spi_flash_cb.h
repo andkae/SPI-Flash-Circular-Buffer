@@ -348,6 +348,27 @@ int sfcb_flash_read (t_sfcb *self, uint32_t adr, void *data, uint16_t len);
 
 
 /**
+ *  @brief Get Last
+ *
+ *  get last written element from circular buffer queue
+ *
+ *  @param[in,out]  self                handle
+ *  @param[in]      cbID                Logical Number of Cicular Buffer queue
+ *  @param[in,out]  *data               pointer to data array with read data
+ *  @param[in]      len                 size of *data in bytes, limited the queue element size
+ *  @return         int                 state
+ *  @retval         #SFCB_OK            Request accepted
+ *  @retval         #SFCB_E_WKR_BSY     Worker is busy, wait for processing last job
+ *  @retval         #SFCB_E_NO_CB_Q     Circular buffer queue not present
+ *  @retval         #SFCB_E_WKR_REQ     Circular Buffer is not prepared for reading element, run #sfcb_worker
+ *  @since          2023-08-15
+ *  @author         Andreas Kaeberlein
+ */
+int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t len);
+
+
+
+/**
  *  @brief idmax
  *
  *  get maximum id in selected circular buffer queue
