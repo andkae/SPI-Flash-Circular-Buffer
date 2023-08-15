@@ -381,25 +381,9 @@ int main ()
 	}
 	
 	
-	
-
-	
-	
-	
-	
-	
-
-
-
-
-
-
-
 
 	/* write to file */
 	sfm_store(&spiFlash, "./flash.dif");
-	
-	
 	
 	/* avoid warning */
 	goto OK_END;
