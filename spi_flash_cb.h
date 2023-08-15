@@ -103,7 +103,8 @@ typedef enum
 typedef enum
 {
     SFCB_E_NOERO,   /**<  No Error occured */
-    SFCB_E_BUFSIZE  /**<  Buffer too small for operation */
+    SFCB_E_BUFSIZE, /**<  Buffer too small for operation */
+    SFCB_E_UNKBEH   /**<  Unknown behaviour observed */
 } t_sfcb_error;
 
 
@@ -150,6 +151,7 @@ typedef struct t_sfcb_cb
     uint32_t    uint32StopSector;           /**< Stop Sector. At least two sectors are required, otherwise will sector erase delete complete buffer */
     uint32_t    uint32StartPageWrite;       /**< Start Page number of next entry */
     uint32_t    uint32StartPageIdMin;       /**< Start page of Circular buffer entry with lowest number, used for sector erase */
+    uint32_t    uint32StartPageIdMax;       /**< Start page of Circular buffer entry with highest number, used for #sfcb_get_last */
     uint16_t    uint16NumPagesPerElem;      /**< Number of pages per element */
     uint16_t    uint16NumEntriesMax;        /**< Maximal Number of entries in circular buffer caused by partition table */
     uint16_t    uint16NumEntries;           /**< Number of entries in circular buffer */
@@ -178,8 +180,8 @@ typedef struct t_sfcb
     uint8_t         uint8Busy;              /**< Performing splitted interaction of circular buffers */
     t_sfcb_cmd      cmd;                    /**< Command to be executed, #t_sfcb_cmd */
     uint8_t         uint8IterCb;            /**< Iterator for splitted interaction, iterator over Circular buffers */
-    uint16_t        uint16IterElem;         /**< Iterator for splitted interaction, iteartor over elements in circular buffer */
-    uint32_t        uint32IterPage;         /**< Page Iterator. Contents full byte address but in multiple of pages. F. e. captures last header page, next page write */
+    uint16_t        uint16Iter;             /**< General Iterator for splitted interaction, used to iterate over bytes in circular buffer element, or to iterate over circular buffer elements itself */
+    uint32_t        uint32IterAdr;          /**< Flash address iterator. Contents full byte address in flash. F. e. captures last header page, next page write */
     t_sfcb_stage    stage;                  /**< Execution stage, from last interaction, #t_sfcb_stage */
     t_sfcb_error    error;                  /**< Error code if somehting strange happend, #t_sfcb_error */
     void*           ptrCbElemPl;            /**< Pointer to Payload data of CB Element */
