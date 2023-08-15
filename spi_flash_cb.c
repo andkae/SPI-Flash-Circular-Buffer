@@ -472,7 +472,7 @@ void sfcb_worker (t_sfcb *self)
 			switch (self->stage) {
 				/* check for WIP */
 				case SFCB_STG00:
-					sfcb_printf("  INFO:%s:ADD:STG0: check for WIP\n", __FUNCTION__);
+					sfcb_printf("  INFO:%s:GET:STG0: check for WIP\n", __FUNCTION__);
 					if ( (0 == self->uint16SpiLen) || (0 != (self->uint8PtrSpi[1] & SFCB_FLASH_MNG_WIP_MSK)) ) {
 						/* First Request or WIP */
 						self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_STATE_REG;
@@ -486,9 +486,10 @@ void sfcb_worker (t_sfcb *self)
 				/* Copy SPI Packet to data buffer */
 				case SFCB_STG01:
 					/* debug message */
-					sfcb_printf("  INFO:%s:GET:STG1: Copy bytes in payload buffer\n", __FUNCTION__);
+					sfcb_printf("  INFO:%s:GET:STG1:\n", __FUNCTION__);
 					/* copy data available? */
 					if ( 0 != self->uint16SpiLen ) {
+						sfcb_printf("  INFO:%s:GET:STG1: Copy bytes in payload buffer\n", __FUNCTION__);
 						uint16CpyLen = (uint16_t) (self->uint16SpiLen - SFCB_FLASH_TOPO_ADR_BYTE - 1);	// -1: for instruction
 						memcpy(self->ptrCbElemPl+self->uint16Iter, self->uint8PtrSpi + SFCB_FLASH_TOPO_ADR_BYTE + 1, uint16CpyLen);
 						self->uint16Iter = (uint16_t) (self->uint16Iter + uint16CpyLen);		// payload byte counter
@@ -509,7 +510,7 @@ void sfcb_worker (t_sfcb *self)
 						self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_DATA;	// read data
 						sfcb_adr32_uint8(self->uint32IterAdr, self->uint8PtrSpi+1, SFCB_FLASH_TOPO_ADR_BYTE);	// +1 first byte is instruction
 						/* User Message */
-						sfcb_printf("  INFO:%s:GET:STG1: Request next segment from Flash, adr=0x%x, len=%d\n", __FUNCTION__, self->uint32IterAdr, self->uint16SpiLen);						
+						sfcb_printf("  INFO:%s:GET:STG2: Request next segment from Flash, adr=0x%x, len=%d\n", __FUNCTION__, self->uint32IterAdr, self->uint16SpiLen);						
 						/* wait for HW */
 						self->stage = SFCB_STG01;	// Copy read data back
 					/* CB Element Read complete */
@@ -787,7 +788,7 @@ int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
  *  sfcb_get_last
  *    get last written element from circular buffer
  */
-int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t lenMax)
+int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
 {
 	/* no jobs pending */
 	if ( 0 != self->uint8Busy ) {
@@ -804,15 +805,14 @@ int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t lenMax)
 		sfcb_printf("  ERROR:%s: Circular Buffer is not prepared for request\n", __FUNCTION__);
 		return SFCB_E_WKR_REQ;	// Circular Buffer is not prepared for reading element, run #sfcb_worker
 	}
-	/* check for enough data */
-	if (lenMax < ((self->ptrCbs[cbID]).uint16NumPagesPerElem * SFCB_FLASH_TOPO_PAGE_SIZE) ) {
-		sfcb_printf("  ERROR:%s: data buffer to small for circular buffer element\n", __FUNCTION__);
-		return SFCB_E_MEM;	// data buffer to small for circular buffer element
+	/* limit to size of last circular buffer element */
+	if ( len > ((self->ptrCbs[cbID]).uint16NumPagesPerElem * SFCB_FLASH_TOPO_PAGE_SIZE) ) {
+		len = (uint16_t) ((self->ptrCbs[cbID]).uint16NumPagesPerElem * SFCB_FLASH_TOPO_PAGE_SIZE);	
 	}
 	/* prepare job */
 	self->ptrCbElemPl = data;
-	self->uint16CbElemPlSize = (uint16_t) ((self->ptrCbs[cbID]).uint16NumPagesPerElem * SFCB_FLASH_TOPO_PAGE_SIZE);	// read complete element from circular buffer
-	self->uint32IterAdr = ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageIdMax;	// Start address of last written element, newest circular buffer entry
+	self->uint16CbElemPlSize = len;	// read number of requested bytes, but limited to last  element size
+	self->uint32IterAdr = (uint32_t) (((self->ptrCbs)[cbID]).uint32StartPageIdMax + sizeof(spi_flash_cb_elem_head));	// Start address of last written element, newest circular buffer entry, header is not part of payload
 	self->uint16Iter = 0;	// used as ptrCbElemPl written pointer
 	/* Setup new Job */
 	self->uint8Busy = 1;
