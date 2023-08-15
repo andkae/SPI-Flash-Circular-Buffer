@@ -820,7 +820,7 @@ int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
 	self->stage = SFCB_STG00;
 	self->error = SFCB_E_NOERO;
 	/* fine */
-	return 0;
+	return SFCB_OK;
 }
 
 
