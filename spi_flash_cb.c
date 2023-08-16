@@ -97,7 +97,8 @@
  *  @param[in]      dividend        input to be divided
  *  @param[in]      divisor         divider of input
  *  @return         uint32_t        rounded up quotient
- *
+ *  @since          July 25, 2022
+ *  @author         Andreas Kaeberlein
  */
 static uint32_t sfcb_ceildivide_uint32(uint32_t dividend, uint32_t divisor)
 {   
@@ -117,9 +118,10 @@ static uint32_t sfcb_ceildivide_uint32(uint32_t dividend, uint32_t divisor)
  *  @param[in,out]  *spi            SPI buffer, takes converted address place
  *  @param[in]      adrBytes        Number of bytes for address
  *  @return         void
- *
+ *  @since          December 31, 2022
+ *  @author         Andreas Kaeberlein
  */
-static inline void sfcb_adr32_uint8(uint32_t adr, uint8_t *spi, uint8_t adrBytes)
+static void sfcb_adr32_uint8(uint32_t adr, uint8_t *spi, uint8_t adrBytes)
 {
 	/* on highest index is lowest byte placed */
 	for ( int8_t i = (int8_t) (adrBytes-1); i >= 0; i-- ) {
