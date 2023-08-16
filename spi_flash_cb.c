@@ -110,7 +110,8 @@ static uint32_t sfcb_ceildivide_uint32(uint32_t dividend, uint32_t divisor)
 
 
 
-/** @brief address translation
+/** 
+ *  @brief address translation
  *
  *  converts 32bit SPI Flash address to SPI packet convenient byte sequence 
  *
@@ -128,6 +129,33 @@ static void sfcb_adr32_uint8(uint32_t adr, uint8_t *spi, uint8_t adrBytes)
 		spi[i] = (uint8_t) (adr & 0xFF);	// get lowest byte
 		adr = adr >> 8;	// shift one byte right
 	}
+}
+
+
+
+/** 
+ *  @brief address translation
+ *
+ *  converts 32bit SPI Flash address to SPI packet convenient byte sequence 
+ *
+ *  @param[in,out]  self                handle, #t_sfcb
+ *  @return         int					WIP packet required?
+ *  @retval         0            		No New WIP Request packet necessary
+ *  @retval         -1            		Issue new WIP poll request
+ *  @since          August 16, 2023
+ *  @author         Andreas Kaeberlein
+ */
+static int sfcb_wip_poll(t_sfcb *self)
+{
+	if ( (0 == self->uint16SpiLen) || (0 != (self->uint8PtrSpi[1] & SFCB_FLASH_MNG_WIP_MSK)) ) {
+		/* First Request or WIP */
+		self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_STATE_REG;
+		self->uint8PtrSpi[1] = 0;
+		self->uint16SpiLen = 2;
+		return -1;
+	}
+	self->uint16SpiLen = 0;
+	return 0;
 }
 
 
@@ -225,15 +253,9 @@ void sfcb_worker (t_sfcb *self)
 								   self->uint16SpiLen,
 							       self->uint8PtrSpi[1]
 								);
-					/* check */
-					if ( (0 == self->uint16SpiLen) || (0 != (self->uint8PtrSpi[1] & SFCB_FLASH_MNG_WIP_MSK)) ) {
-						/* First Request or WIP */
-						self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_STATE_REG;
-						self->uint8PtrSpi[1] = 0;
-						self->uint16SpiLen = 2;
-						return;
-					}
-					self->uint16SpiLen = 0;		// no data available
+					/* WIP Check */
+					if ( 0 != sfcb_wip_poll(self) ) return;
+					/* free for new request */
 					self->stage = SFCB_STG01;	// Go one with search for Free Segment
 					FALL_THROUGH;	// Go one with next
 				/* Find Page for next Circulat buffer element */
@@ -398,13 +420,9 @@ void sfcb_worker (t_sfcb *self)
 				/* check for WIP */
 				case SFCB_STG00:
 					sfcb_printf("  INFO:%s:ADD:STG0: check for WIP\n", __FUNCTION__);
-					if ( (0 == self->uint16SpiLen) || (0 != (self->uint8PtrSpi[1] & SFCB_FLASH_MNG_WIP_MSK)) ) {
-						/* First Request or WIP */
-						self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_STATE_REG;
-						self->uint8PtrSpi[1] = 0;
-						self->uint16SpiLen = 2;
-						return;
-					}
+					/* WIP Check */
+					if ( 0 != sfcb_wip_poll(self) ) return;
+					/* free for new request */
 					self->stage = SFCB_STG01;	// Go one with search for Free Segment
 					FALL_THROUGH;				// Go one with next
 				/* Circular Buffer written, if not write enable */
@@ -475,14 +493,9 @@ void sfcb_worker (t_sfcb *self)
 				/* check for WIP */
 				case SFCB_STG00:
 					sfcb_printf("  INFO:%s:GET:STG0: check for WIP\n", __FUNCTION__);
-					if ( (0 == self->uint16SpiLen) || (0 != (self->uint8PtrSpi[1] & SFCB_FLASH_MNG_WIP_MSK)) ) {
-						/* First Request or WIP */
-						self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_STATE_REG;
-						self->uint8PtrSpi[1] = 0;
-						self->uint16SpiLen = 2;
-						return;
-					}
-					self->uint16SpiLen = 0;		// Prepare for next packet assemble
+					/* WIP Check */
+					if ( 0 != sfcb_wip_poll(self) ) return;
+					/* free for new request */
 					self->stage = SFCB_STG01;	// Go one with search for Free Segment
 					FALL_THROUGH;				// Go one with next
 				/* Copy SPI Packet to data buffer */
@@ -543,14 +556,9 @@ void sfcb_worker (t_sfcb *self)
 				/* check for WIP */
 				case SFCB_STG00:
 					sfcb_printf("  INFO:%s:RAW:STG0: check for WIP\n", __FUNCTION__);
-					if ( (0 == self->uint16SpiLen) || (0 != (self->uint8PtrSpi[1] & SFCB_FLASH_MNG_WIP_MSK)) ) {
-						/* First Request or WIP */
-						self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_STATE_REG;
-						self->uint8PtrSpi[1] = 0;
-						self->uint16SpiLen = 2;
-						return;
-					}
-					self->uint16SpiLen = 0;		// no data available
+					/* WIP Check */
+					if ( 0 != sfcb_wip_poll(self) ) return;
+					/* free for new request */
 					self->stage = SFCB_STG01;	// Go one with search for Free Segment
 					FALL_THROUGH;				// Go one with stage
 				/* Prepare raw read */
