@@ -806,8 +806,8 @@ int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
 		return SFCB_E_WKR_REQ;	// Circular Buffer is not prepared for reading element, run #sfcb_worker
 	}
 	/* limit to size of last circular buffer element */
-	if ( len > ((self->ptrCbs[cbID]).uint16NumPagesPerElem * SFCB_FLASH_TOPO_PAGE_SIZE) ) {
-		len = (uint16_t) ((self->ptrCbs[cbID]).uint16NumPagesPerElem * SFCB_FLASH_TOPO_PAGE_SIZE);	
+	if ( (len + sizeof(spi_flash_cb_elem_head)) > ((self->ptrCbs[cbID]).uint16NumPagesPerElem * SFCB_FLASH_TOPO_PAGE_SIZE) ) {
+		len = (uint16_t) (((self->ptrCbs[cbID]).uint16NumPagesPerElem * (uint16_t) SFCB_FLASH_TOPO_PAGE_SIZE) - (uint16_t) sizeof(spi_flash_cb_elem_head));	
 	}
 	/* prepare job */
 	self->ptrCbElemPl = data;
