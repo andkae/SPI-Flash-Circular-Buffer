@@ -226,7 +226,7 @@ void sfcb_worker (t_sfcb *self)
 	sfcb_printf("__FUNCTION__ = %s\n", __FUNCTION__);
 	sfcb_printf("  INFO:%s:sfcb_p            = %p\n", __FUNCTION__, self);
 	sfcb_printf("  INFO:%s:sfcb:spi_p        = %p\n", __FUNCTION__, self->uint8PtrSpi);	// spi buffer
-	sfcb_printf("  INFO:%s:sfcb:spi:cbHead_p = %p\n", __FUNCTION__, cbHead);			// spi packate casted to header
+	sfcb_printf("  INFO:%s:sfcb:spi:cbHead_p = %p\n", __FUNCTION__, cbHead);			// spi packet casted to header
 	/* select part of FSM */
     switch (self->cmd) {
 		/* 
