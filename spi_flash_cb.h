@@ -197,8 +197,8 @@ typedef struct t_sfcb
  *
  *  initializes flash circular buffer
  *
- *  @param[in,out]  self                handle
- *  @param[in,out]  *cb                 pointer to allocated memory for circulat buffer list, see #t_sfcb
+ *  @param[in,out]  self                handle, #t_sfcb
+ *  @param[in,out]  *cb                 pointer to allocated memory for circulat buffer list, see #t_sfcb_cb
  *  @param[in]      cbLen               number of maximum allowed circular buffers
  *  @param[in,out]  *spi                pointer to uint8_t spi interaction buffer, buffer betwween spi core and flash driver
  *  @param[in]      spiLen              maimum number of elements in buffer => size in byte
@@ -218,7 +218,7 @@ int sfcb_init (t_sfcb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen
  *  Services Circular buffer layer, request/processes SPI packets.
  *  Executes request from #sfcb_mkcb,
  *
- *  @param[in,out]  self                handle
+ *  @param[in,out]  self                handle, #t_sfcb
  *  @return         void                state
  *  @since          2022-07-27
  *  @author         Andreas Kaeberlein
@@ -245,7 +245,7 @@ uint32_t sfcb_flash_size (void);
  *
  *  creates new circular buffer entry in flash parition table
  *
- *  @param[in,out]  self                handle
+ *  @param[in,out]  self                handle, #t_sfcb
  *  @param[in]      magicNum            Magic Number for marking enties valid, should differ between different Circular buffer entries
  *  @param[in]      elemSizeByte        Size of one element in the circular buffer in byte
  *  @param[in]      numElems            minimal number of elements in the circular buffer, through need of sector erase and not deleting all data can be this number higher then requested
@@ -265,7 +265,7 @@ int sfcb_new_cb (t_sfcb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_
  *
  *  checks if #sfcb_worker is free for new requests
  *
- *  @param[in,out]  self                handle
+ *  @param[in,out]  self                handle, #t_sfcb
  *  @return         int                 state
  *  @retval         0                   idle
  *  @retval         1                   busy
@@ -281,7 +281,7 @@ int sfcb_busy (t_sfcb *self);
  *
  *  gets length of next spi packet, created by #sfcb_worker
  *
- *  @param[in,out]  self                handle
+ *  @param[in,out]  self                handle, #t_sfcb
  *  @return         uint16_t            current length of SPI packet, created by #sfcb_worker
  *  @since          2022-08-19
  *  @author         Andreas Kaeberlein
@@ -295,7 +295,7 @@ uint16_t sfcb_spi_len (t_sfcb *self);
  *
  *  Reads from Flash and builds-up queues with circular buffer structure
  *
- *  @param[in,out]  self                handle
+ *  @param[in,out]  self                handle, #t_sfcb
  *  @return         int                 state
  *  @retval         0                   Request accepted
  *  @retval         1                   Not Free for new Requests, wait
@@ -312,7 +312,7 @@ int sfcb_mkcb (t_sfcb *self);
  *
  *  adds element to circular buffer structure
  *
- *  @param[in,out]  self                handle
+ *  @param[in,out]  self                handle, #t_sfcb
  *  @param[in]      cbID                Logical Number of Cicular Buffer queue
  *  @param[in]      *data               Pointer to data array which should add
  *  @param[in]      len                 size of *data in bytes
@@ -333,7 +333,7 @@ int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len);
  *
  *  read raw data from flash
  *
- *  @param[in,out]  self                handle
+ *  @param[in,out]  self                handle, #t_sfcb
  *  @param[in]      adr                 start address for read
  *  @param[in,out]  *data               pointer to data array with read data
  *  @param[in]      len                 size of *data in bytes
@@ -352,7 +352,7 @@ int sfcb_flash_read (t_sfcb *self, uint32_t adr, void *data, uint16_t len);
  *
  *  get last written element from circular buffer queue
  *
- *  @param[in,out]  self                handle
+ *  @param[in,out]  self                handle, #t_sfcb
  *  @param[in]      cbID                Logical Number of Cicular Buffer queue
  *  @param[in,out]  *data               pointer to data array with read data
  *  @param[in]      len                 size of *data in bytes, limited the queue element size
@@ -373,7 +373,7 @@ int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t len);
  *
  *  get maximum id in selected circular buffer queue
  *
- *  @param[in,out]  self                handle
+ *  @param[in,out]  self                handle, #t_sfcb
  *  @param[in]      cbID                Logical Number of Cicular Buffer queue
  *  @return         uint32_t            highest id number of selected circular buffer queue
  *  @since          2023-01-01
