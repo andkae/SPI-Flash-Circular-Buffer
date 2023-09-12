@@ -473,7 +473,7 @@ void sfcb_worker (t_sfcb *self)
 					self->uint16SpiLen = (uint16_t) (self->uint16SpiLen + uint16CpyLen);
 					self->uint16Iter = (uint16_t) (self->uint16Iter + uint16CpyLen);
 					/* increment iterators */
-					(self->uint32IterAdr)++;
+					self->uint32IterAdr = self->uint32IterAdr + uint16CpyLen;	// inc flash address by written data
 					/* Go to wait WIP */
 					self->stage = SFCB_STG00;
 					return;
