@@ -473,8 +473,14 @@ void sfcb_worker (t_sfcb *self)
 					self->uint16SpiLen = (uint16_t) (self->uint16SpiLen + uint16CpyLen);
 					self->uint16Iter = (uint16_t) (self->uint16Iter + uint16CpyLen);
 					/* increment iterators */
-					self->uint32IterAdr = self->uint32IterAdr + uint16CpyLen;	// inc flash address by written data
+					self->uint32IterAdr = self->uint32IterAdr + self->uint16SpiLen - SFCB_FLASH_TOPO_ADR_BYTE - 1;	// inc flash address by written data, reduced by SPI Flash instruction
 					/* Go to wait WIP */
+					self->stage = SFCB_STG03;
+					return;
+				/* check for WIP, sfcb_wip_poll check for spiLen=0, therefore additional state necessary */
+				case SFCB_STG03:
+					self->uint16SpiLen = 0;	// needed for WIP poll packet
+					sfcb_wip_poll(self);
 					self->stage = SFCB_STG00;
 					return;
 				/* something strange happend */
