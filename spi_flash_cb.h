@@ -155,6 +155,7 @@ typedef struct t_sfcb_cb
     uint16_t    uint16NumPagesPerElem;      /**< Number of pages per element */
     uint16_t    uint16NumEntriesMax;        /**< Maximal Number of entries in circular buffer caused by partition table */
     uint16_t    uint16NumEntries;           /**< Number of entries in circular buffer */
+    uint16_t    uint16PlFlashOfs;           /**< Stores offset in flash payload, enables splitted append operations */
 } t_sfcb_cb;
 
 

@@ -473,6 +473,7 @@ void sfcb_worker (t_sfcb *self)
 					self->uint16SpiLen = (uint16_t) (self->uint16SpiLen + uint16CpyLen);
 					self->uint16Iter = (uint16_t) (self->uint16Iter + uint16CpyLen);
 					/* increment iterators */
+					((self->ptrCbs)[self->uint8IterCb]).uint16PlFlashOfs = (uint16_t) (((self->ptrCbs)[self->uint8IterCb]).uint16PlFlashOfs + self->uint16SpiLen - SFCB_FLASH_TOPO_ADR_BYTE - 1);	// payload internal flash offset
 					self->uint32IterAdr = self->uint32IterAdr + self->uint16SpiLen - SFCB_FLASH_TOPO_ADR_BYTE - 1;	// inc flash address by written data, reduced by SPI Flash instruction
 					/* Go to wait WIP */
 					self->stage = SFCB_STG03;
@@ -728,22 +729,23 @@ int sfcb_mkcb (t_sfcb *self)
 	}
 	/* Find first queue which needs an build */
 	self->uint8IterCb = 0;
-	for ( uint8_t i=0; i<self->uint8NumCbs; i++ ) {
+	for ( uint8_t i = 0; i < self->uint8NumCbs; i++ ) {
 		if ( (0 == ((self->ptrCbs)[i]).uint8Used) || (0 == ((self->ptrCbs)[i]).uint8MgmtValid) ) {
 			break;
 		}
 		self->uint8IterCb = i;	// search for queue with uninitialized or invalid managment data, in case of only on circular buffer needes to rebuild
 	}
 	/* reset idmin/idmax counter to enable select of correct page to erase */
-	for ( uint8_t i = 0; i < (self->uint8NumCbs); i++ ) {
+	for ( uint8_t i = self->uint8IterCb; i < (self->uint8NumCbs); i++ ) {
 		/* not used, leave */
 		if ( 0 == ((self->ptrCbs)[i]).uint8Used ) {
 			break;
 		}
 		/* dirty buffer, needs to rebuild absoulte idmin/idmax for next write, otherwise will the last written element deleted */
-		if ( 0 == ((self->ptrCbs)[self->uint8IterCb]).uint8MgmtValid ) {	
+		if ( 0 == ((self->ptrCbs)[i]).uint8MgmtValid ) {	
 			(self->ptrCbs[i]).uint32IdNumMax = 0;				// in case of uninitialized memory
 			(self->ptrCbs[i]).uint32IdNumMin = __UINT32_MAX__;	// assign highest number
+			(self->ptrCbs[i]).uint16PlFlashOfs = 0;				// reset payload offset counter
 		}
 	}
 	/* Setup new Job */
