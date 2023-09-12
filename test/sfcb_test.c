@@ -35,6 +35,12 @@
 
 
 
+/** Globals **/
+const uint32_t	g_uint32SpiFlashCycleOut = 1000;	// abort calling SPI flash
+uint8_t			g_uint8Spi[266];					// SPI packet buffer
+
+
+
 /**
  *  @brief print hexdump
  *
@@ -101,6 +107,128 @@ static void print_raw_sfcb_cb (void* sfcb_cb, uint8_t num_sfcb_cb )
 
 
 /**
+ *  @brief check sfcb_get_last
+ *
+ *  writes element in circular buffer
+ *  reads element back and compares the data
+ *
+ *  @param[in,out]  flash       		spi flash model handle, #t_sfm
+ *  @param[in,out]  sfcb            	spi flash circular buffer handle, #t_sfcb
+ *  @param[in]  	qNum           	 	number of tested circular buffer queue
+ *  @param[in]  	qSize           	test data size for selected circular buffer queue
+ *  @return         int                 test state
+ *  @retval         0                   Success
+ *  @retval         -1                  Fail
+ *  @since          September 12, 2023
+ *  @author         Andreas Kaeberlein
+ */
+static int test_get_last (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint16_t qSize)
+{
+	/** Variables **/
+	uint8_t*	uint8PtrDat1 = NULL;	// temporary data buffer
+	uint8_t*	uint8PtrDat2 = NULL;	// temporary data buffer
+	uint32_t	uint32Counter;			// counter for time out
+	int			sfm_state;				// SPI Flash model return state
+	
+	/* entry message */
+	printf("__FUNCTION__ = %s\n", __FUNCTION__);
+	/* prepare data set */
+	uint8PtrDat1 = malloc(qSize);	// reference buffer
+	uint8PtrDat2 = malloc(qSize);	// data buffer
+	for ( uint16_t i = 0; i < qSize; i++ ) {	// create random numbers
+		uint8PtrDat1[i] = (uint8_t) (rand() % 256);
+	}
+	memcpy(uint8PtrDat2, uint8PtrDat1, qSize);
+	/* write into Q */
+	if ( 0 != sfcb_add(sfcb, qNum, uint8PtrDat1, qSize) ) {
+		printf("ERROR:%s:sfcb_add failed to start", __FUNCTION__);
+		return -1;
+	}
+	uint32Counter = 0;
+	while ( (0 != sfcb_busy(sfcb)) && ((uint32Counter++) < g_uint32SpiFlashCycleOut) ) {
+		/* SFCB Worker */
+		sfcb_worker (sfcb);
+		/* interact SPI Flash Model */
+		sfm_state = sfm(flash, (uint8_t*) &g_uint8Spi, sfcb_spi_len(sfcb));
+		if ( 0 != sfm_state ) {
+			printf("ERROR:%s:spi_flash_model ero=%d\n", __FUNCTION__, sfm_state);
+			return -1;
+		}
+	}
+	if ( uint32Counter == g_uint32SpiFlashCycleOut ) {
+		printf("ERROR:%s:sfcb_mkcb tiout reached", __FUNCTION__);
+		return -1;
+	}
+	/* compare if write data does not destroy */
+	for ( uint16_t i = 0; i < qSize; i++ ) {
+		if ( uint8PtrDat1[i] != uint8PtrDat2[i] ) {
+			printf("ERROR:%s:sfcb_add write data destroyed", __FUNCTION__);
+			return -1;
+		}
+	}
+	/* rebuild managment data */
+	if ( 0 != sfcb_mkcb(sfcb) ) {
+		printf("ERROR:%s:sfcb_mkcb failed to start", __FUNCTION__);
+		return -1;
+	}
+	uint32Counter = 0;
+	while ( (0 != sfcb_busy(sfcb)) && ((uint32Counter++) < g_uint32SpiFlashCycleOut) ) {
+		/* SFCB Worker */
+		sfcb_worker (sfcb);
+		/* interact SPI Flash Model */
+		sfm_state = sfm(flash, (uint8_t*) &g_uint8Spi, sfcb_spi_len(sfcb));
+		if ( 0 != sfm_state ) {
+			printf("ERROR:%s:spi_flash_model ero=%d", __FUNCTION__, sfm_state);
+			return -1;
+		}
+	}
+	if ( uint32Counter == g_uint32SpiFlashCycleOut ) {
+		printf("ERROR:%s:sfcb_mkcb tiout reached", __FUNCTION__);
+		return -1;
+	}
+	/* get last element from spi flash */
+	memset(uint8PtrDat2, 0, qSize);	// destroy buffer
+		// int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
+	if ( 0 != sfcb_get_last(sfcb, qNum, uint8PtrDat2, qSize) ) {
+		printf("ERROR:%s:sfcb_get_last failed to start", __FUNCTION__);
+		return -1;
+	}
+	uint32Counter = 0;
+	while ( (0 != sfcb_busy(sfcb)) && ((uint32Counter++) < g_uint32SpiFlashCycleOut) ) {
+		/* SFCB Worker */
+		sfcb_worker (sfcb);
+		/* interact SPI Flash Model */
+		sfm_state = sfm(flash, (uint8_t*) &g_uint8Spi, sfcb_spi_len(sfcb));
+		if ( 0 != sfm_state ) {
+			printf("ERROR:%s:spi_flash_model ero=%d", __FUNCTION__, sfm_state);
+			return -1;
+		}
+	}
+	if ( uint32Counter == g_uint32SpiFlashCycleOut ) {
+		printf("ERROR:%s:sfcb_mkcb tiout reached", __FUNCTION__);
+		return -1;
+	}
+	/* compare for corect read */
+	for ( uint16_t i = 0; i < qSize; i++ ) {
+		if ( uint8PtrDat1[i] != uint8PtrDat2[i] ) {
+			printf("ERROR:%s:sfcb_get_last: wrong data ofs=0x%x is=0x%02x, exp=0x%02x\n", __FUNCTION__, i, uint8PtrDat2[i], uint8PtrDat1[i]);
+			printf("  Is-Dump:\n");
+			printf("  --------\n");
+			print_hexdump("    ", uint8PtrDat2, qSize);
+			printf("  Exp-Dump:\n");
+			printf("  ---------\n");
+			print_hexdump("    ", uint8PtrDat1, qSize);
+			return -1;
+		}
+	}
+	free(uint8PtrDat1);
+	free(uint8PtrDat2);	
+	return 0;
+}
+
+
+
+/**
  *  Main
  *  ----
  */
@@ -115,12 +243,9 @@ int main ()
 	int				sfm_state;							// SPI Flash model return state
 	t_sfcb			sfcb;								// SPI Flash as circular buffer
 	t_sfcb_cb		sfcb_cb[5];							// five logical parts in SPI Flash
-	uint8_t			uint8Spi[266];						// SPI packet buffer
 	uint8_t			uint8Temp;							// help variable
 	uint8_t			uint8FlashData[] = {0,1,2,3,4,5};	// SPI test data
 	uint8_t			uint8Buf[1024];						// help buffer
-	uint8_t*		uint8PtrDat1 = NULL;				// temporary data buffer
-	uint8_t*		uint8PtrDat2 = NULL;				// temporary data buffer
 	
 
 	/* entry message */
@@ -137,14 +262,14 @@ int main ()
 	
 	/* sfcb_init */
 	printf("INFO:%s:sfcb_init\n", __FUNCTION__);
-	printf("INFO:%s:uint8Spi_p      = %p\n", 		__FUNCTION__, &uint8Spi);
+	printf("INFO:%s:uint8Spi_p      = %p\n", 		__FUNCTION__, &g_uint8Spi);
 	printf("INFO:%s:sfcb_p          = %p\n", 		__FUNCTION__, &sfcb);
 	printf("INFO:%s:sfcb_cb_p       = %p\n", 		__FUNCTION__, &sfcb_cb);
 	printf("INFO:%s:sfcb_size       = %d byte\n",	__FUNCTION__, (int) sizeof(sfcb));
 	printf("INFO:%s:sfcb_cb[0]_size = %d byte\n",	__FUNCTION__, (int) sizeof(sfcb_cb[0]));
 	memset(sfcb_cb, 0xaf, sizeof(sfcb_cb));	// mess-up memory to check init
 	/* int sfcb_init (t_sfcb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen) */
-	sfcb_init (&sfcb, &sfcb_cb, sizeof(sfcb_cb)/sizeof(sfcb_cb[0]), &uint8Spi, sizeof(uint8Spi)/sizeof(uint8Spi[0]));
+	sfcb_init (&sfcb, &sfcb_cb, sizeof(sfcb_cb)/sizeof(sfcb_cb[0]), &g_uint8Spi, sizeof(g_uint8Spi)/sizeof(g_uint8Spi[0]));
 	/* check for error */
 	for ( uint8_t i = 0; i < sizeof(sfcb_cb)/sizeof(sfcb_cb[0]); i++ ) {
 		/* check flags */
@@ -182,7 +307,7 @@ int main ()
 		/* SFCB Worker */
 		sfcb_worker (&sfcb);
 		/* interact SPI Flash Model */
-		sfm_state = sfm(&spiFlash, (uint8_t*) &uint8Spi, sfcb_spi_len(&sfcb));
+		sfm_state = sfm(&spiFlash, (uint8_t*) &g_uint8Spi, sfcb_spi_len(&sfcb));
 		if ( 0 != sfm_state ) {
 			printf("ERROR:%s:spi_flash_model ero=%d", __FUNCTION__, sfm_state);
 			goto ERO_END;
@@ -194,6 +319,13 @@ int main ()
 	}
 	sfm_dump( &spiFlash, 0, 256 );	// dump SPI flash content
 
+
+
+	////////////////////////////////////////////
+	//
+	//  Single Pages Payloads
+	//
+	////////////////////////////////////////////
 
 	/* SFCB add, queue 0 */
 	for ( uint8_t i = 0; i < 63; i++ ) {
@@ -208,7 +340,7 @@ int main ()
 			/* SFCB Worker */
 			sfcb_worker (&sfcb);
 			/* interact SPI Flash Model */
-			sfm_state = sfm(&spiFlash, (uint8_t*) &uint8Spi, sfcb_spi_len(&sfcb));
+			sfm_state = sfm(&spiFlash, (uint8_t*) &g_uint8Spi, sfcb_spi_len(&sfcb));
 			if ( 0 != sfm_state ) {
 				printf("ERROR:%s:spi_flash_model ero=%d\n", __FUNCTION__, sfm_state);
 				goto ERO_END;
@@ -229,13 +361,13 @@ int main ()
 			/* SFCB Worker */
 			sfcb_worker (&sfcb);
 			/* interact SPI Flash Model */
-			sfm_state = sfm(&spiFlash, (uint8_t*) &uint8Spi, sfcb_spi_len(&sfcb));
+			sfm_state = sfm(&spiFlash, (uint8_t*) &g_uint8Spi, sfcb_spi_len(&sfcb));
 			if ( 0 != sfm_state ) {
 				printf("ERROR:%s:spi_flash_model ero=%d\n", __FUNCTION__, sfm_state);
 				/* print spi packet */
 				printf("SPI Packet: ");
 				for ( uint32_t j = 0; j < sfcb_spi_len(&sfcb); j++ ) {
-					printf(" %02x", uint8Spi[j]);
+					printf(" %02x", g_uint8Spi[j]);
 				}
 				printf("\n");
 				goto ERO_END;
@@ -272,7 +404,7 @@ int main ()
 		/* SFCB Worker */
 		sfcb_worker (&sfcb);
 		/* interact SPI Flash Model */
-		sfm_state = sfm(&spiFlash, (uint8_t*) &uint8Spi, sfcb_spi_len(&sfcb));
+		sfm_state = sfm(&spiFlash, (uint8_t*) &g_uint8Spi, sfcb_spi_len(&sfcb));
 		if ( 0 != sfm_state ) {
 			printf("ERROR:%s:spi_flash_model ero=%d\n", __FUNCTION__, sfm_state);
 			goto ERO_END;
@@ -290,99 +422,40 @@ int main ()
 	/* sfcb_get_last
 	 *   reads last written element back
 	 */
-	printf("INFO:%s:sfcb_get_last\n", __FUNCTION__);
-	/* prepare data set */
-	uint8PtrDat1 = malloc(uint16CbQ0Size);	// reference buffer
-	uint8PtrDat2 = malloc(uint16CbQ0Size);	// data buffer
-	for ( uint16_t i = 0; i < uint16CbQ0Size; i++ ) {	// create random numbers
-		uint8PtrDat1[i] = (uint8_t) (rand() % 256);
-	}
-	memcpy(uint8PtrDat2, uint8PtrDat1, uint16CbQ0Size);
-	/* write into Q */
-	if ( 0 != sfcb_add(&sfcb, 0, uint8PtrDat1, uint16CbQ0Size) ) {
-		printf("ERROR:%s:sfcb_add failed to start", __FUNCTION__);
+	printf("INFO:%s:sfcb_get_last:q0: payload size = %d bytes\n", __FUNCTION__, uint16CbQ0Size);
+		// static int test_get_last (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint16_t qSize)
+	if ( 0 != test_get_last(&spiFlash, &sfcb, 0, uint16CbQ0Size) ) {
 		goto ERO_END;
 	}
-	uint32Counter = 0;
-	while ( (0 != sfcb_busy(&sfcb)) && ((uint32Counter++) < uint32SpiFlashCycleOut) ) {
-		/* SFCB Worker */
-		sfcb_worker (&sfcb);
-		/* interact SPI Flash Model */
-		sfm_state = sfm(&spiFlash, (uint8_t*) &uint8Spi, sfcb_spi_len(&sfcb));
-		if ( 0 != sfm_state ) {
-			printf("ERROR:%s:spi_flash_model ero=%d\n", __FUNCTION__, sfm_state);
-			goto ERO_END;
-		}
-	}
-	if ( uint32Counter == uint32SpiFlashCycleOut ) {
-		printf("ERROR:%s:sfcb_mkcb tiout reached", __FUNCTION__);
-		goto ERO_END;
-	}
-	/* compare if write data does not destroy */
-	for ( uint16_t i = 0; i < uint16CbQ0Size; i++ ) {
-		if ( uint8PtrDat1[i] != uint8PtrDat2[i] ) {
-			printf("ERROR:%s:sfcb_add write data destroyed", __FUNCTION__);
-			goto ERO_END;
-		}
-	}
-	/* rebuild managment data */
-	if ( 0 != sfcb_mkcb(&sfcb) ) {
-		printf("ERROR:%s:sfcb_mkcb failed to start", __FUNCTION__);
-		goto ERO_END;
-	}
-	uint32Counter = 0;
-	while ( (0 != sfcb_busy(&sfcb)) && ((uint32Counter++) < uint32SpiFlashCycleOut) ) {
-		/* SFCB Worker */
-		sfcb_worker (&sfcb);
-		/* interact SPI Flash Model */
-		sfm_state = sfm(&spiFlash, (uint8_t*) &uint8Spi, sfcb_spi_len(&sfcb));
-		if ( 0 != sfm_state ) {
-			printf("ERROR:%s:spi_flash_model ero=%d", __FUNCTION__, sfm_state);
-			goto ERO_END;
-		}
-	}
-	if ( uint32Counter == uint32SpiFlashCycleOut ) {
-		printf("ERROR:%s:sfcb_mkcb tiout reached", __FUNCTION__);
-		goto ERO_END;
-	}
-	/* get last element from spi flash */
-	memset(uint8PtrDat2, 0, uint16CbQ0Size);	// destroy buffer
-		// int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
-	if ( 0 != sfcb_get_last(&sfcb, 0, uint8PtrDat2, uint16CbQ0Size) ) {
-		printf("ERROR:%s:sfcb_get_last failed to start", __FUNCTION__);
-		goto ERO_END;
-	}
-	uint32Counter = 0;
-	while ( (0 != sfcb_busy(&sfcb)) && ((uint32Counter++) < uint32SpiFlashCycleOut) ) {
-		/* SFCB Worker */
-		sfcb_worker (&sfcb);
-		/* interact SPI Flash Model */
-		sfm_state = sfm(&spiFlash, (uint8_t*) &uint8Spi, sfcb_spi_len(&sfcb));
-		if ( 0 != sfm_state ) {
-			printf("ERROR:%s:spi_flash_model ero=%d", __FUNCTION__, sfm_state);
-			goto ERO_END;
-		}
-	}
-	if ( uint32Counter == uint32SpiFlashCycleOut ) {
-		printf("ERROR:%s:sfcb_mkcb tiout reached", __FUNCTION__);
-		goto ERO_END;
-	}
-	/* compare for corect read */
-	for ( uint16_t i = 0; i < uint16CbQ0Size; i++ ) {
-		if ( uint8PtrDat1[i] != uint8PtrDat2[i] ) {
-			printf("ERROR:%s:sfcb_get_last: wrong data ofs=0x%x is=0x%02x, exp=0x%02x\n", __FUNCTION__, i, uint8PtrDat2[i], uint8PtrDat1[i]);
-			printf("  Is-Dump:\n");
-			printf("  --------\n");
-			print_hexdump("    ", uint8PtrDat2, uint16CbQ0Size);
-			printf("  Exp-Dump:\n");
-			printf("  ---------\n");
-			print_hexdump("    ", uint8PtrDat1, uint16CbQ0Size);
-			goto ERO_END;
-		}
-	}
-	
-	
 
+	
+	
+	////////////////////////////////////////////
+	//
+	//  Multiple Pages Payloads
+	//
+	////////////////////////////////////////////
+	
+	/* sfcb_get_last
+	 *   reads last written element back
+	 */
+	printf("INFO:%s:sfcb_get_last:q1: payload size = %d bytes\n", __FUNCTION__, uint16CbQ1Size);
+		// static int test_get_last (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint16_t qSize)
+	if ( 0 != test_get_last(&spiFlash, &sfcb, 1, uint16CbQ1Size) ) {
+		goto ERO_END;
+	}	
+	
+	
+	
+	
+	
+	
+	////////////////////////////////////////////
+	//
+	//  Minor Stuff at End
+	//
+	////////////////////////////////////////////	
+	
 	/* write to file */
 	sfm_store(&spiFlash, "./flash.dif");
 	
@@ -396,6 +469,7 @@ int main ()
 
     /* abnormal end */
     ERO_END:
+		sfm_store(&spiFlash, "./flash_error.dif");
         printf("FAIL:%s: Module test FAILED :-(\n", __FUNCTION__);
         exit(EXIT_FAILURE);
 
