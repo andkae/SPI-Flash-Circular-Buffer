@@ -188,7 +188,6 @@ typedef struct t_sfcb
     void*           ptrCbElemPl;            /**< Pointer to Payload data of CB Element */
     uint16_t        uint16DataLen;          /**< data length */
     uint16_t        uint16CbElemPlSize;     /**< Size of payload data in bytes */
-
 } t_sfcb;
 
 
