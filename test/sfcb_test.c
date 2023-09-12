@@ -137,10 +137,11 @@ int main ()
 	
 	/* sfcb_init */
 	printf("INFO:%s:sfcb_init\n", __FUNCTION__);
-	printf("INFO:%s:uint8Spi_p      = %p\n", 	__FUNCTION__, &uint8Spi);
-	printf("INFO:%s:sfcb_p          = %p\n", 	__FUNCTION__, &sfcb);
-	printf("INFO:%s:sfcb_cb_p       = %p\n", 	__FUNCTION__, &sfcb_cb);
-	printf("INFO:%s:sfcb_cb[0]_size = 0x%x\n",	__FUNCTION__, (int) sizeof(sfcb_cb[0]));
+	printf("INFO:%s:uint8Spi_p      = %p\n", 		__FUNCTION__, &uint8Spi);
+	printf("INFO:%s:sfcb_p          = %p\n", 		__FUNCTION__, &sfcb);
+	printf("INFO:%s:sfcb_cb_p       = %p\n", 		__FUNCTION__, &sfcb_cb);
+	printf("INFO:%s:sfcb_size       = %d byte\n",	__FUNCTION__, (int) sizeof(sfcb));
+	printf("INFO:%s:sfcb_cb[0]_size = %d byte\n",	__FUNCTION__, (int) sizeof(sfcb_cb[0]));
 	memset(sfcb_cb, 0xaf, sizeof(sfcb_cb));	// mess-up memory to check init
 	/* int sfcb_init (t_sfcb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen) */
 	sfcb_init (&sfcb, &sfcb_cb, sizeof(sfcb_cb)/sizeof(sfcb_cb[0]), &uint8Spi, sizeof(uint8Spi)/sizeof(uint8Spi[0]));

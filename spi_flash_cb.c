@@ -451,8 +451,9 @@ void sfcb_worker (t_sfcb *self)
 					self->uint8PtrSpi[0] = SFCB_FLASH_IST_WR_PAGE;	// write page
 					sfcb_adr32_uint8(self->uint32IterAdr, self->uint8PtrSpi+1, SFCB_FLASH_TOPO_ADR_BYTE);	// +1 first byte is instruction
 					self->uint16SpiLen = SFCB_FLASH_TOPO_ADR_BYTE + 1;	// +1: IST
-					/* on first packet add header */
+					/* get available bytes in page */
 					uint16PagesBytesAvail = SFCB_FLASH_TOPO_PAGE_SIZE;
+					/* on first packet add header */
 					if ( 0 == self->uint16Iter ) {
 						memset(&head, 0, sizeof(head));	// make empty
 						head.uint32MagicNum = ((self->ptrCbs)[self->uint8IterCb]).uint32MagicNum;
