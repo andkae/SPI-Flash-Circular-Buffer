@@ -452,9 +452,9 @@ void sfcb_worker (t_sfcb *self)
 					sfcb_adr32_uint8(self->uint32IterAdr, self->uint8PtrSpi+1, SFCB_FLASH_TOPO_ADR_BYTE);	// +1 first byte is instruction
 					self->uint16SpiLen = SFCB_FLASH_TOPO_ADR_BYTE + 1;	// +1: IST
 					/* get available bytes in page */
-					uint16PagesBytesAvail = SFCB_FLASH_TOPO_PAGE_SIZE;
+					uint16PagesBytesAvail = (uint16_t) (SFCB_FLASH_TOPO_PAGE_SIZE - (self->uint32IterAdr % SFCB_FLASH_TOPO_PAGE_SIZE));
 					/* on first packet add header */
-					if ( 0 == self->uint16Iter ) {
+					if ( 0 == ((self->ptrCbs)[self->uint8IterCb]).uint16PlFlashOfs ) {
 						memset(&head, 0, sizeof(head));	// make empty
 						head.uint32MagicNum = ((self->ptrCbs)[self->uint8IterCb]).uint32MagicNum;
 						head.uint32IdNum = ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax + 1;
@@ -762,7 +762,7 @@ int sfcb_mkcb (t_sfcb *self)
 
 /**
  *  sfcb_add
- *    inserts element into circular buffer
+ *    inserts element into circular buffer, one time write
  */
 int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
 {	
@@ -789,6 +789,44 @@ int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
 	self->uint8IterCb = cbID;	// used as pointer to queue
 	((self->ptrCbs)[self->uint8IterCb]).uint8MgmtValid = 0;	// mark queue as dirty, for next write run #sfcb_mkcb
 	self->uint32IterAdr = ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageWrite;	// select page to write
+	self->ptrCbElemPl = data;
+	self->uint16CbElemPlSize = len;
+	self->uint16Iter = 0;	// used as ptrCbElemPl written pointer
+	/* Setup new Job */
+	self->uint8Busy = 1;
+	self->cmd = SFCB_CMD_ADD;
+	self->stage = SFCB_STG00;
+	self->error = SFCB_E_NOERO;
+	/* fine */
+	return 0;
+}
+
+
+
+/**
+ *  sfcb_add_append
+ *    inserts element into circular buffer in multiple writes
+ */
+int sfcb_add_append (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
+{	
+	/* no jobs pending */
+	if ( 0 != self->uint8Busy ) {
+		sfcb_printf("  ERROR:%s: Worker is busy\n", __FUNCTION__);
+		return SFCB_E_WKR_BSY;	// Worker is busy, wait for processing last job
+	}
+	if ( !(cbID < self->uint8NumCbs) ) {
+		sfcb_printf("  ERROR:%s: Circular buffer queue not active or present\n", __FUNCTION__);
+		return SFCB_E_NO_CB_Q;	// circular buffer queue not present
+	}
+	/* check for match into circular buffer size */
+	if ( len > (((self->ptrCbs)[cbID]).uint16NumPagesPerElem * SFCB_FLASH_TOPO_PAGE_SIZE) ) {
+		sfcb_printf("  ERROR:%s: data segement is larger then reserved circular buffer space\n", __FUNCTION__);
+		return SFCB_E_MEM;	// data segement is larger then reserved circular buffer space
+	}
+	/* store information for insertion */
+	self->uint8IterCb = cbID;	// used as pointer to queue
+	((self->ptrCbs)[self->uint8IterCb]).uint8MgmtValid = 0;	// mark queue as dirty, for next write run #sfcb_mkcb
+	self->uint32IterAdr = ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageWrite + ((self->ptrCbs)[self->uint8IterCb]).uint16PlFlashOfs;	// select page for write
 	self->ptrCbElemPl = data;
 	self->uint16CbElemPlSize = len;
 	self->uint16Iter = 0;	// used as ptrCbElemPl written pointer
