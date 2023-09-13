@@ -329,6 +329,30 @@ int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len);
 
 
 /**
+ *  @brief add element append
+ *
+ *  adds element to circular buffer structure with multiple writes into same page
+ *    1) append(1) -> write one byte to payload segment OFS=0
+ *    2) append(1) -> write one byte to payload segment OFS=1
+ *    and so on...
+ *
+ *  @param[in,out]  self                handle, #t_sfcb
+ *  @param[in]      cbID                Logical Number of Cicular Buffer queue
+ *  @param[in]      *data               Pointer to data array which should add
+ *  @param[in]      len                 size of *data in bytes
+ *  @return         int                 state
+ *  @retval         0                   Request accepted.
+ *  @retval         1                   Worker is busy, wait for processing last job.
+ *  @retval         2                   Circular Buffer is not prepared for adding new element, run #sfcb_worker.
+ *  @retval         4                   Data segement is larger then reserved circular buffer space.
+ *  @since          2023-09-13
+ *  @author         Andreas Kaeberlein
+ */
+int sfcb_add_append (t_sfcb *self, uint8_t cbID, void *data, uint16_t len);
+
+
+
+/**
  *  @brief RAW Read
  *
  *  read raw data from flash
