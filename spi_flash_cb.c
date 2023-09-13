@@ -446,7 +446,7 @@ void sfcb_worker (t_sfcb *self)
 					break;
 				/* Page Write to Circular Buffer */
 				case SFCB_STG02:
-					sfcb_printf("  INFO:%s:ADD:STG2: Page Write to Circular Buffer, adr=0x%x\n", __FUNCTION__, self->uint32IterAdr);
+					sfcb_printf("  INFO:%s:ADD:STG2: Page Write to Circular Buffer, adr=0x%x, payload,len=%d\n", __FUNCTION__, self->uint32IterAdr, self->uint16CbElemPlSize);
 					/* assemble Flash Instruction packet */
 					self->uint8PtrSpi[0] = SFCB_FLASH_IST_WR_PAGE;	// write page
 					sfcb_adr32_uint8(self->uint32IterAdr, self->uint8PtrSpi+1, SFCB_FLASH_TOPO_ADR_BYTE);	// +1 first byte is instruction
