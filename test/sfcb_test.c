@@ -37,6 +37,8 @@
 
 /** Globals **/
 const uint32_t	g_uint32SpiFlashCycleOut = 1000;	// abort calling SPI flash
+const uint16_t	g_uint16CbQ0Size = 244;				// CB Q0 Payload size
+const uint16_t	g_uint16CbQ1Size = 12280;			// CB Q1 Payload size
 uint8_t			g_uint8Spi[266];					// SPI packet buffer
 
 
@@ -307,12 +309,7 @@ static int test_get_last (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint16_t qSi
 int main ()
 {
     /** Variables **/
-	const uint32_t	uint32SpiFlashCycleOut = 1000;		// abort calling SPI flash
-	const uint16_t	uint16CbQ0Size = 244;				// CB Q0 Payload size
-	const uint16_t	uint16CbQ1Size = 12280;				// CB Q1 Payload size
-	uint32_t		uint32Counter;						// counter
 	t_sfm       	spiFlash;   						// SPI flash model
-	int				sfm_state;							// SPI Flash model return state
 	t_sfcb			sfcb;								// SPI Flash as circular buffer
 	t_sfcb_cb		sfcb_cb[5];							// five logical parts in SPI Flash
 	uint8_t			uint8Temp;							// help variable
@@ -361,8 +358,8 @@ int main ()
 	 *   adds two new circular buffers to the SPI Flash
 	*/
 	printf("INFO:%s:sfcb_new_cb\n", __FUNCTION__);
-	sfcb_new_cb (&sfcb, 0x47114711, uint16CbQ0Size, 32, &uint8Temp);	// start-up counter with operation
-	sfcb_new_cb (&sfcb, 0x08150815, uint16CbQ1Size, 16, &uint8Temp);	// error data collection 12KiB
+	sfcb_new_cb (&sfcb, 0x47114711, g_uint16CbQ0Size, 32, &uint8Temp);	// start-up counter with operation
+	sfcb_new_cb (&sfcb, 0x08150815, g_uint16CbQ1Size, 16, &uint8Temp);	// error data collection 12KiB
 	print_raw_sfcb_cb(&sfcb_cb, sizeof(sfcb_cb)/sizeof(sfcb_cb[0]));	// raw dump of handling indo
 	
 	
@@ -374,19 +371,9 @@ int main ()
 		printf("ERROR:%s:sfcb_mkcb failed to start", __FUNCTION__);
 		goto ERO_END;
 	}
-	uint32Counter = 0;
-	while ( (0 != sfcb_busy(&sfcb)) && ((uint32Counter++) < uint32SpiFlashCycleOut) ) {
-		/* SFCB Worker */
-		sfcb_worker (&sfcb);
-		/* interact SPI Flash Model */
-		sfm_state = sfm(&spiFlash, (uint8_t*) &g_uint8Spi, sfcb_spi_len(&sfcb));
-		if ( 0 != sfm_state ) {
-			printf("ERROR:%s:spi_flash_model ero=%d", __FUNCTION__, sfm_state);
-			goto ERO_END;
-		}
-	}
-	if ( uint32Counter == uint32SpiFlashCycleOut ) {
-		printf("ERROR:%s:sfcb_mkcb tiout reached", __FUNCTION__);
+		// run_sfm_update (t_sfm* flash, t_sfcb* sfcb)
+	if ( 0 != run_sfm_update(&spiFlash, &sfcb) ) {
+		printf("ERROR:%s:run_sfm_update\n", __FUNCTION__);
 		goto ERO_END;
 	}
 	sfm_dump( &spiFlash, 0, 256 );	// dump SPI flash content
@@ -414,9 +401,8 @@ int main ()
         goto ERO_END;
     }
 	/* check highest id */
-	uint32Counter = sfcb_idmax(&sfcb, 0);
-	if ( 63 != uint32Counter ) {
-        printf("ERROR:%s:sfcb_idmax:q0 exp,idmax=63, is,idmax=%d\n", __FUNCTION__, uint32Counter);
+	if ( 63 != sfcb_idmax(&sfcb, 0) ) {
+        printf("ERROR:%s:sfcb_idmax:q0 exp,idmax=63, is,idmax=%d\n", __FUNCTION__, sfcb_idmax(&sfcb, 0));
         goto ERO_END;
 	}
 	
@@ -430,16 +416,10 @@ int main ()
 		printf("ERROR:%s:sfcb_flash_read failed to start", __FUNCTION__);
 		goto ERO_END;
 	}
-	uint32Counter = 0;
-	while ( (0 != sfcb_busy(&sfcb)) && ((uint32Counter++) < uint32SpiFlashCycleOut) ) {
-		/* SFCB Worker */
-		sfcb_worker (&sfcb);
-		/* interact SPI Flash Model */
-		sfm_state = sfm(&spiFlash, (uint8_t*) &g_uint8Spi, sfcb_spi_len(&sfcb));
-		if ( 0 != sfm_state ) {
-			printf("ERROR:%s:spi_flash_model ero=%d\n", __FUNCTION__, sfm_state);
-			goto ERO_END;
-		}
+		// run_sfm_update (t_sfm* flash, t_sfcb* sfcb)
+	if ( 0 != run_sfm_update(&spiFlash, &sfcb) ) {
+		printf("ERROR:%s:run_sfm_update\n", __FUNCTION__);
+		goto ERO_END;
 	}
 	/* compare data */
 	for ( uint32_t i = 0; i < 256; i++ ) {
@@ -453,9 +433,9 @@ int main ()
 	/* sfcb_get_last
 	 *   reads last written element back
 	 */
-	printf("INFO:%s:sfcb_get_last:q0: payload size = %d bytes\n", __FUNCTION__, uint16CbQ0Size);
+	printf("INFO:%s:sfcb_get_last:q0: payload size = %d bytes\n", __FUNCTION__, g_uint16CbQ0Size);
 		// static int test_get_last (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint16_t qSize)
-	if ( 0 != test_get_last(&spiFlash, &sfcb, 0, uint16CbQ0Size) ) {
+	if ( 0 != test_get_last(&spiFlash, &sfcb, 0, g_uint16CbQ0Size) ) {
 		goto ERO_END;
 	}
 
@@ -476,9 +456,9 @@ int main ()
 	/* sfcb_get_last
 	 *   reads last written element back
 	 */
-	printf("INFO:%s:sfcb_get_last:q1: payload size = %d bytes\n", __FUNCTION__, uint16CbQ1Size);
+	printf("INFO:%s:sfcb_get_last:q1: payload size = %d bytes\n", __FUNCTION__, g_uint16CbQ1Size);
 		// static int test_get_last (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint16_t qSize)
-	if ( 0 != test_get_last(&spiFlash, &sfcb, 1, uint16CbQ1Size) ) {
+	if ( 0 != test_get_last(&spiFlash, &sfcb, 1, g_uint16CbQ1Size) ) {
 		goto ERO_END;
 	}	
 	
