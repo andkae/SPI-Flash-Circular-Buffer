@@ -105,70 +105,29 @@ static void print_raw_sfcb_cb (void* sfcb_cb, uint8_t num_sfcb_cb )
 }
 
 
+
 /**
- *  @brief run_sfcb_add
+ *  @brief run_sfm_update
  *
- *  adds element to SFCB buffer queue and perform update managament data
+ *  update SPI Flash Model
  *
  *  @param[in,out]  flash       		spi flash model handle, #t_sfm
  *  @param[in,out]  sfcb            	spi flash circular buffer handle, #t_sfcb
- *  @param[in]  	qNum           	 	number of tested circular buffer queue
- *  @param[in]  	data           		array with data to write into circular buffer
- *  @param[in]  	len           		number of bytes in data
  *  @return         int                 test state
  *  @retval         0                   Success
  *  @retval         -1                  Fail
- *  @since          September 12, 2023
+ *  @since          September 13, 2023
  *  @author         Andreas Kaeberlein
  */
-static int run_sfcb_add (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint8_t* data, uint16_t len)
+static int run_sfm_update (t_sfm* flash, t_sfcb* sfcb)
 {
 	/** Variables **/
 	uint32_t	uint32Counter;			// counter for time out
-	int			sfm_state;				// SPI Flash model return state
-	uint8_t*	uint8PtrData = NULL;	// temporary data buffer, backup to check for destroy
+	int			sfm_state;				// SPI Flash model return state	
 	
 	/* entry message */
-	printf("__FUNCTION__ = %s\n", __FUNCTION__);
-	/* make backup */
-	uint8PtrData = malloc(len);
-	if ( NULL == uint8PtrData ) {
-		printf("ERROR:%s: malloc fail", __FUNCTION__);
-		return -1;
-	}
-	memcpy(uint8PtrData, data, len);
-	/* write into Q */
-	if ( 0 != sfcb_add(sfcb, qNum, data, len) ) {
-		printf("ERROR:%s:sfcb_add failed to start", __FUNCTION__);
-		return -1;
-	}
-	uint32Counter = 0;
-	while ( (0 != sfcb_busy(sfcb)) && ((uint32Counter++) < g_uint32SpiFlashCycleOut) ) {
-		/* SFCB Worker */
-		sfcb_worker (sfcb);
-		/* interact SPI Flash Model */
-		sfm_state = sfm(flash, (uint8_t*) &g_uint8Spi, sfcb_spi_len(sfcb));
-		if ( 0 != sfm_state ) {
-			printf("ERROR:%s:spi_flash_model ero=%d\n", __FUNCTION__, sfm_state);
-			return -1;
-		}
-	}
-	if ( uint32Counter == g_uint32SpiFlashCycleOut ) {
-		printf("ERROR:%s:sfcb_mkcb tiout reached", __FUNCTION__);
-		return -1;
-	}
-	/* compare if write data does not destroy */
-	for ( uint16_t i = 0; i < len; i++ ) {
-		if ( data[i] != uint8PtrData[i] ) {
-			printf("ERROR:%s:sfcb_add write data destroyed", __FUNCTION__);
-			return -1;
-		}
-	}
-	/* rebuild managment data */
-	if ( 0 != sfcb_mkcb(sfcb) ) {
-		printf("ERROR:%s:sfcb_mkcb failed to start", __FUNCTION__);
-		return -1;
-	}
+	printf("__FUNCTION__ = %s\n", __FUNCTION__);	
+	/* update sfm */
 	uint32Counter = 0;
 	while ( (0 != sfcb_busy(sfcb)) && ((uint32Counter++) < g_uint32SpiFlashCycleOut) ) {
 		/* SFCB Worker */
@@ -188,6 +147,69 @@ static int run_sfcb_add (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint8_t* data
 	}
 	if ( uint32Counter == g_uint32SpiFlashCycleOut ) {
 		printf("ERROR:%s:sfcb_mkcb tiout reached", __FUNCTION__);
+		return -1;
+	}
+	/* all done */
+	return 0;
+}
+
+
+
+/**
+ *  @brief run_sfcb_add
+ *
+ *  adds element to SFCB buffer queue and perform update managament data
+ *
+ *  @param[in,out]  flash       		spi flash model handle, #t_sfm
+ *  @param[in,out]  sfcb            	spi flash circular buffer handle, #t_sfcb
+ *  @param[in]  	qNum           	 	number of tested circular buffer queue
+ *  @param[in]  	data           		array with data to write into circular buffer
+ *  @param[in]  	len           		number of bytes in data
+ *  @return         int                 test state
+ *  @retval         0                   Success
+ *  @retval         -1                  Fail
+ *  @since          September 12, 2023
+ *  @author         Andreas Kaeberlein
+ */
+static int run_sfcb_add (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint8_t* data, uint16_t len)
+{
+	/** Variables **/
+	uint8_t*	uint8PtrData = NULL;	// temporary data buffer, backup to check for destroy
+	
+	/* entry message */
+	printf("__FUNCTION__ = %s\n", __FUNCTION__);
+	/* make backup */
+	uint8PtrData = malloc(len);
+	if ( NULL == uint8PtrData ) {
+		printf("ERROR:%s: malloc fail", __FUNCTION__);
+		return -1;
+	}
+	memcpy(uint8PtrData, data, len);
+	/* write into Q */
+	if ( 0 != sfcb_add(sfcb, qNum, data, len) ) {
+		printf("ERROR:%s:sfcb_add failed to start", __FUNCTION__);
+		return -1;
+	}
+		// run_sfm_update (t_sfm* flash, t_sfcb* sfcb)
+	if ( 0 != run_sfm_update(flash, sfcb) ) {
+		printf("ERROR:%s:run_sfm_update\n", __FUNCTION__);
+		return -1;
+	}
+	/* compare if write data does not destroy */
+	for ( uint16_t i = 0; i < len; i++ ) {
+		if ( data[i] != uint8PtrData[i] ) {
+			printf("ERROR:%s:sfcb_add write data destroyed", __FUNCTION__);
+			return -1;
+		}
+	}
+	/* rebuild managment data */
+	if ( 0 != sfcb_mkcb(sfcb) ) {
+		printf("ERROR:%s:sfcb_mkcb failed to start", __FUNCTION__);
+		return -1;
+	}
+		// run_sfm_update (t_sfm* flash, t_sfcb* sfcb)
+	if ( 0 != run_sfm_update(flash, sfcb) ) {
+		printf("ERROR:%s:run_sfm_update\n", __FUNCTION__);
 		return -1;
 	}
 	/* all done */
