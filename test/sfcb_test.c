@@ -220,6 +220,41 @@ static int run_sfcb_add (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint8_t* data
 }
 
 
+/**
+ *  @brief run_sfcb_get_last
+ *
+ *  adds element to SFCB buffer queue and perform update managament data
+ *
+ *  @param[in,out]  flash       		spi flash model handle, #t_sfm
+ *  @param[in,out]  sfcb            	spi flash circular buffer handle, #t_sfcb
+ *  @param[in]  	qNum           	 	number of tested circular buffer queue
+ *  @param[in]  	data           		array with data to write into circular buffer
+ *  @param[in]  	len           		number of bytes in data
+ *  @return         int                 test state
+ *  @retval         0                   Success
+ *  @retval         -1                  Fail
+ *  @since          September 13, 2023
+ *  @author         Andreas Kaeberlein
+ */
+static int run_sfcb_get_last (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint8_t* data, uint16_t len)
+{
+	/* entry message */
+	printf("__FUNCTION__ = %s\n", __FUNCTION__);
+		// int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
+	if ( 0 != sfcb_get_last(sfcb, qNum, data, len) ) {
+		printf("ERROR:%s:sfcb_get_last failed to start", __FUNCTION__);
+		return -1;
+	}
+		// run_sfm_update (t_sfm* flash, t_sfcb* sfcb)
+	if ( 0 != run_sfm_update(flash, sfcb) ) {
+		printf("ERROR:%s:run_sfm_update\n", __FUNCTION__);
+		return -1;
+	}
+	/* all done */
+	return 0;
+}
+
+
 
 /**
  *  @brief check sfcb_get_last
@@ -242,8 +277,6 @@ static int test_get_last (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint16_t qSi
 	/** Variables **/
 	uint8_t*	uint8PtrDat1 = NULL;	// temporary data buffer
 	uint8_t*	uint8PtrDat2 = NULL;	// temporary data buffer
-	uint32_t	uint32Counter;			// counter for time out
-	int			sfm_state;				// SPI Flash model return state
 	
 	/* entry message */
 	printf("__FUNCTION__ = %s\n", __FUNCTION__);
@@ -262,25 +295,10 @@ static int test_get_last (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint16_t qSi
 	}
 	/* get last element from spi flash */
 	memset(uint8PtrDat2, 0, qSize);	// destroy buffer
-		// int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
-	if ( 0 != sfcb_get_last(sfcb, qNum, uint8PtrDat2, qSize) ) {
-		printf("ERROR:%s:sfcb_get_last failed to start", __FUNCTION__);
-		return -1;
-	}
-	uint32Counter = 0;
-	while ( (0 != sfcb_busy(sfcb)) && ((uint32Counter++) < g_uint32SpiFlashCycleOut) ) {
-		/* SFCB Worker */
-		sfcb_worker (sfcb);
-		/* interact SPI Flash Model */
-		sfm_state = sfm(flash, (uint8_t*) &g_uint8Spi, sfcb_spi_len(sfcb));
-		if ( 0 != sfm_state ) {
-			printf("ERROR:%s:spi_flash_model ero=%d", __FUNCTION__, sfm_state);
-			return -1;
-		}
-	}
-	if ( uint32Counter == g_uint32SpiFlashCycleOut ) {
-		printf("ERROR:%s:sfcb_mkcb tiout reached", __FUNCTION__);
-		return -1;
+		// run_sfcb_get_last (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint8_t* data, uint16_t len)
+	if ( 0 != run_sfcb_get_last(flash, sfcb, qNum, uint8PtrDat2, qSize) ) {
+		printf("ERROR:%s:run_sfcb_get_last failed to start", __FUNCTION__);
+		return -1;		
 	}
 	/* compare for corect read */
 	for ( uint16_t i = 0; i < qSize; i++ ) {
