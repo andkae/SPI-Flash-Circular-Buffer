@@ -90,6 +90,38 @@ static void print_hexdump (char leadBlank[], void *mem, size_t size)
 }
 
 
+/**
+ *  @brief mem cmp
+ *
+ *  Compare to memory segments and output in case of difference
+ *
+ *  @param[in,out]  *is            		is data segement
+ *  @param[in,out]  *exp            	expected data segement
+ *  @param[in]  	len             	number of bytes in *is and *exp
+ *  @return         int                 test state
+ *  @retval         0                   Success
+ *  @retval         -1                  Fail
+ *  @since          September 13, 2023
+ */
+static int mem_cmp (uint8_t* is, uint8_t* exp, uint16_t len)
+{
+	/* compare for corect read */
+	for ( uint16_t i = 0; i < len; i++ ) {
+		if ( is[i] != exp[i] ) {
+			printf("ERROR:%s:sfcb_get_last: wrong data ofs=0x%x is=0x%02x, exp=0x%02x\n", __FUNCTION__, i, is[i], exp[i]);
+			printf("  Is-Dump:\n");
+			printf("  --------\n");
+			print_hexdump("    ", is, len);
+			printf("  Exp-Dump:\n");
+			printf("  ---------\n");
+			print_hexdump("    ", exp, len);
+			return -1;
+		}
+	}
+	return 0;
+}
+
+
 
 /**
  *  prints raw data of SFCB
@@ -220,6 +252,64 @@ static int run_sfcb_add (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint8_t* data
 }
 
 
+
+/**
+ *  @brief run_sfcb_add_append
+ *
+ *  adds element to cirrcular buffer entry in portions of bytes
+ *    1) append(1) -> write one byte to payload segment OFS=0
+ *    2) append(1) -> write one byte to payload segment OFS=1
+ *    and so on...
+ *
+ *  @param[in,out]  flash       		spi flash model handle, #t_sfm
+ *  @param[in,out]  sfcb            	spi flash circular buffer handle, #t_sfcb
+ *  @param[in]  	qNum           	 	number of tested circular buffer queue
+ *  @param[in]  	data           		array with data to write into circular buffer
+ *  @param[in]  	len           		number of bytes in data
+ *  @return         int                 test state
+ *  @retval         0                   Success
+ *  @retval         -1                  Fail
+ *  @since          September 12, 2023
+ *  @author         Andreas Kaeberlein
+ */
+static int run_sfcb_add_append (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint8_t* data, uint16_t len)
+{
+	/** Variables **/
+	uint8_t*	uint8PtrData = NULL;	// temporary data buffer, backup to check for destroy
+	
+	/* entry message */
+	printf("__FUNCTION__ = %s\n", __FUNCTION__);
+	/* make backup */
+	uint8PtrData = malloc(len);
+	if ( NULL == uint8PtrData ) {
+		printf("ERROR:%s: malloc fail", __FUNCTION__);
+		return -1;
+	}
+	memcpy(uint8PtrData, data, len);
+	/* write into Q */
+	if ( 0 != sfcb_add_append(sfcb, qNum, data, len) ) {
+		printf("ERROR:%s:sfcb_add failed to start", __FUNCTION__);
+		return -1;
+	}
+		// run_sfm_update (t_sfm* flash, t_sfcb* sfcb)
+	if ( 0 != run_sfm_update(flash, sfcb) ) {
+		printf("ERROR:%s:run_sfm_update\n", __FUNCTION__);
+		return -1;
+	}
+	/* compare if write data does not destroy */
+	for ( uint16_t i = 0; i < len; i++ ) {
+		if ( data[i] != uint8PtrData[i] ) {
+			printf("ERROR:%s:sfcb_add write data destroyed", __FUNCTION__);
+			return -1;
+		}
+	}
+	/* all done */
+	free(uint8PtrData);
+	return 0;
+}
+
+
+
 /**
  *  @brief run_sfcb_get_last
  *
@@ -301,18 +391,12 @@ static int test_get_last (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint16_t qSi
 		return -1;		
 	}
 	/* compare for corect read */
-	for ( uint16_t i = 0; i < qSize; i++ ) {
-		if ( uint8PtrDat1[i] != uint8PtrDat2[i] ) {
-			printf("ERROR:%s:sfcb_get_last: wrong data ofs=0x%x is=0x%02x, exp=0x%02x\n", __FUNCTION__, i, uint8PtrDat2[i], uint8PtrDat1[i]);
-			printf("  Is-Dump:\n");
-			printf("  --------\n");
-			print_hexdump("    ", uint8PtrDat2, qSize);
-			printf("  Exp-Dump:\n");
-			printf("  ---------\n");
-			print_hexdump("    ", uint8PtrDat1, qSize);
-			return -1;
-		}
+		// mem_cmp (uint8_t* is, uint8_t* exp, uint16_t len)
+	if ( 0 != mem_cmp(uint8PtrDat2, uint8PtrDat1, qSize) ) {
+		printf("ERROR:%s:mem_cmp", __FUNCTION__);
+		return -1;
 	}
+	/* all done */
 	free(uint8PtrDat1);
 	free(uint8PtrDat2);	
 	return 0;
@@ -458,10 +542,14 @@ int main ()
 	}
 
 
+	/* sfcb_add_append
+	 *   write to SPI flash in portions of bytes
+	 */
+	printf("INFO:%s:sfcb_add_append:q0\n", __FUNCTION__);
+	
 
 
-
-
+		// run_sfcb_add_append (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint8_t* data, uint16_t len)
 
 	
 	
