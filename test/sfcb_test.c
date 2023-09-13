@@ -405,6 +405,78 @@ static int test_get_last (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint16_t qSi
 
 
 /**
+ *  @brief test_add_append
+ *
+ *  writes bytewise into payload element
+ *  reads element back and compares the data
+ *
+ *  @param[in,out]  flash       		spi flash model handle, #t_sfm
+ *  @param[in,out]  sfcb            	spi flash circular buffer handle, #t_sfcb
+ *  @param[in]  	qNum           	 	number of tested circular buffer queue
+ *  @param[in]  	qSize           	test data size for selected circular buffer queue
+ *  @return         int                 test state
+ *  @retval         0                   Success
+ *  @retval         -1                  Fail
+ *  @since          September 13, 2023
+ *  @author         Andreas Kaeberlein
+ */
+static int test_add_append (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint16_t qSize)
+{
+	/** Variables **/
+	uint8_t*	uint8PtrDat1 = NULL;	// temporary data buffer
+	uint8_t*	uint8PtrDat2 = NULL;	// temporary data buffer
+	
+	/* entry message */
+	printf("__FUNCTION__ = %s\n", __FUNCTION__);
+	/* prepare data set */
+	uint8PtrDat1 = malloc(qSize);	// reference buffer
+	uint8PtrDat2 = malloc(qSize);	// data buffer
+	for ( uint16_t i = 0; i < qSize; i++ ) {	// create random numbers
+		uint8PtrDat1[i] = (uint8_t) (rand() % 256);
+	}
+	memcpy(uint8PtrDat2, uint8PtrDat1, qSize);
+	/* write into Q, bytewise */
+	for ( uint16_t i = 0; i < qSize; i++ ) {
+		// run_sfcb_add_append (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint8_t* data, uint16_t len)
+		if ( 0 != run_sfcb_add_append (flash, sfcb, qNum, uint8PtrDat1+i, 1) ) {
+			printf("ERROR:%s:run_sfcb_add: add byte=%d failed", __FUNCTION__, i);
+			return -1;
+		}
+	}
+	/* rebuild sfcb */
+	if ( 0 != sfcb_mkcb(sfcb) ) {
+		printf("ERROR:%s:sfcb_mkcb failed to start", __FUNCTION__);
+		return -1;
+	}
+		// run_sfm_update (t_sfm* flash, t_sfcb* sfcb)
+	if ( 0 != run_sfm_update(flash, sfcb) ) {
+		printf("ERROR:%s:run_sfm_update\n", __FUNCTION__);
+		return -1;
+	}
+	/* get last element from spi flash */
+	memset(uint8PtrDat2, 0, qSize);	// destroy buffer
+		// run_sfcb_get_last (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint8_t* data, uint16_t len)
+	if ( 0 != run_sfcb_get_last(flash, sfcb, qNum, uint8PtrDat2, qSize) ) {
+		printf("ERROR:%s:run_sfcb_get_last failed to start", __FUNCTION__);
+		return -1;		
+	}
+	/* compare for corect read */
+		// mem_cmp (uint8_t* is, uint8_t* exp, uint16_t len)
+	if ( 0 != mem_cmp(uint8PtrDat2, uint8PtrDat1, qSize) ) {
+		printf("ERROR:%s:mem_cmp", __FUNCTION__);
+		return -1;
+	}
+	/* all done */
+	free(uint8PtrDat1);
+	free(uint8PtrDat2);	
+	return 0;
+}
+
+
+
+
+
+/**
  *  Main
  *  ----
  */
@@ -545,13 +617,12 @@ int main ()
 	/* sfcb_add_append
 	 *   write to SPI flash in portions of bytes
 	 */
-	printf("INFO:%s:sfcb_add_append:q0\n", __FUNCTION__);
-	
+	printf("INFO:%s:sfcb_add_append:q0: payload size = %d bytes\n", __FUNCTION__, g_uint16CbQ0Size);
+		// static int test_add_append (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint16_t qSize)
+	if ( 0 != test_add_append(&spiFlash, &sfcb, 0, g_uint16CbQ0Size) ) {
+		goto ERO_END;
+	}	
 
-
-		// run_sfcb_add_append (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint8_t* data, uint16_t len)
-
-	
 	
 	////////////////////////////////////////////
 	//
