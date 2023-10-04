@@ -386,6 +386,7 @@ int sfcb_flash_read (t_sfcb *self, uint32_t adr, void *data, uint16_t len);
  *  @retval         #SFCB_E_WKR_BSY     Worker is busy, wait for processing last job
  *  @retval         #SFCB_E_NO_CB_Q     Circular buffer queue not present
  *  @retval         #SFCB_E_WKR_REQ     Circular Buffer is not prepared for reading element, run #sfcb_worker
+ *  @retval         #SFCB_E_CB_Q_MTY    Cirular buffer queue has no valid entries
  *  @since          2023-08-15
  *  @author         Andreas Kaeberlein
  */
