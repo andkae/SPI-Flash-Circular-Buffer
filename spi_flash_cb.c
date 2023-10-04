@@ -862,6 +862,11 @@ int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
 		sfcb_printf("  ERROR:%s: Circular Buffer is not prepared for request\n", __FUNCTION__);
 		return SFCB_E_WKR_REQ;	// Circular Buffer is not prepared for reading element, run #sfcb_worker
 	}
+	/* check if at least one entry is present for getting last element */
+	if ( 0 == ((self->ptrCbs)[cbID]).uint16NumEntries ) {
+		sfcb_printf("  ERROR:%s: Cirular buffer queue has no valid entries\n", __FUNCTION__);
+		return SFCB_E_CB_Q_MTY;
+	}
 	/* limit to size of last circular buffer element */
 	if ( (len + sizeof(spi_flash_cb_elem_head)) > ((self->ptrCbs[cbID]).uint16NumPagesPerElem * SFCB_FLASH_TOPO_PAGE_SIZE) ) {
 		len = (uint16_t) (((self->ptrCbs[cbID]).uint16NumPagesPerElem * (uint16_t) SFCB_FLASH_TOPO_PAGE_SIZE) - (uint16_t) sizeof(spi_flash_cb_elem_head));	

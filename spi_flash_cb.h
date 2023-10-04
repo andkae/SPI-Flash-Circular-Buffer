@@ -33,6 +33,7 @@
 #define SFCB_E_WKR_BSY      (1<<3)  /**< Worker is Busy */
 #define SFCB_E_NO_CB_Q      (1<<4)  /**< circular buffer queue not active or present */
 #define SFCB_E_WKR_REQ      (1<<5)  /**< Circular Buffer is not prepared for request, run #sfcb_worker */
+#define SFCB_E_CB_Q_MTY     (1<<6)  /**< Cirular buffer queue has no valid entries */
 /** @} */   // SFCB_E
 
 
