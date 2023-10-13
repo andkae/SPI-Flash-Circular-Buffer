@@ -924,3 +924,18 @@ uint32_t sfcb_idmax (t_sfcb *self, uint8_t cbID)
     }
     return ((self->ptrCbs)[cbID]).uint32IdNumMax;
 }
+
+
+
+/**
+ *  sfcb_isero
+ *    error happend in last interaction
+ */
+int sfcb_isero (t_sfcb *self)
+{
+    /* error occured? */
+    if ( SFCB_E_NOERO == self->error ) {
+        return 0;   // no error
+    }
+    return -1;  // error
+}

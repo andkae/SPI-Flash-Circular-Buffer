@@ -409,6 +409,22 @@ uint32_t sfcb_idmax (t_sfcb *self, uint8_t cbID);
 
 
 
+/**
+ *  @brief check error
+ *
+ *  check if in last transaction an  error occured
+ *
+ *  @param[in,out]  self                handle, #t_sfcb
+ *  @return         int                 highest id number of selected circular buffer queue
+ *  @retval         0                   No error
+ *  @retval         -1                  error occured, data may corrupted
+ *  @since          2023-10-13
+ *  @author         Andreas Kaeberlein
+ */
+int sfcb_isero (t_sfcb *self);
+
+
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus
