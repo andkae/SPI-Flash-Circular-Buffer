@@ -356,7 +356,7 @@ int sfcb_add_append (t_sfcb *self, uint8_t cbID, void *data, uint16_t len);
 /**
  *  @brief written bytes
  *
- *  returns number of payload bytes written out to flash
+ *  number of written bytes to flash in case of usage of #sfcb_add_append
  *  these bytes are fixed up to an erase
  *
  *  @param[in,out]  self                handle, #t_sfcb
