@@ -842,6 +842,18 @@ int sfcb_add_append (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
 
 
 /**
+ *  sfcb_get_pl_wrcnt
+ *    returns number of payload bytes written out to flash
+ *    these bytes are fixed up to an erase
+ */
+uint16_t sfcb_get_pl_wrcnt (t_sfcb *self, uint8_t cbID)
+{
+    return ((self->ptrCbs)[cbID]).uint16PlFlashOfs;
+}
+
+
+
+/**
  *  sfcb_get_last
  *    get last written element from circular buffer
  */

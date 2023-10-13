@@ -354,6 +354,22 @@ int sfcb_add_append (t_sfcb *self, uint8_t cbID, void *data, uint16_t len);
 
 
 /**
+ *  @brief written bytes
+ *
+ *  returns number of payload bytes written out to flash
+ *  these bytes are fixed up to an erase
+ *
+ *  @param[in,out]  self                handle, #t_sfcb
+ *  @param[in]      cbID                Logical Number of Cicular Buffer queue
+ *  @return         uint16_t            number of bytes written to flash from start of payload
+ *  @since          2023-10-03
+ *  @author         Andreas Kaeberlein
+ */
+uint16_t sfcb_get_pl_wrcnt (t_sfcb *self, uint8_t cbID);
+
+
+
+/**
  *  @brief RAW Read
  *
  *  read raw data from flash

@@ -447,6 +447,11 @@ static int test_add_append (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint16_t q
             printf("ERROR:%s:run_sfcb_add: add byte=%d failed", __FUNCTION__, i);
             return -1;
         }
+        // check internal append offset
+        if ( i != sfcb_get_pl_wrcnt(sfcb, qNum) ) {
+            printf("ERROR:%s:run_sfcb_add:sfcb_get_pl_wrcnt: wrong write count", __FUNCTION__, i);
+            return -1;
+        }
         // check for error
         if ( sfcb_isero(sfcb) ) {
             printf("ERROR:%s:run_sfcb_add: add byte=%d error in driver detected.", __FUNCTION__, i);
