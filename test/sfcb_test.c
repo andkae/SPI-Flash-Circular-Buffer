@@ -448,8 +448,8 @@ static int test_add_append (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint16_t q
             return -1;
         }
         // check internal append offset
-        if ( i != sfcb_get_pl_wrcnt(sfcb, qNum) ) {
-            printf("ERROR:%s:run_sfcb_add:sfcb_get_pl_wrcnt: wrong write count", __FUNCTION__, i);
+        if ( (i+1) != sfcb_get_pl_wrcnt(sfcb, qNum) ) { // i+1: post loop increment
+            printf("ERROR:%s:run_sfcb_add:sfcb_get_pl_wrcnt: wrong write count, exp=%i, is=%i", __FUNCTION__, (i+1), sfcb_get_pl_wrcnt(sfcb, qNum));
             return -1;
         }
         // check for error
