@@ -848,7 +848,7 @@ int sfcb_add_append (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
  */
 uint16_t sfcb_get_pl_wrcnt (t_sfcb *self, uint8_t cbID)
 {
-    return ((self->ptrCbs)[cbID]).uint16PlFlashOfs;
+    return (uint16_t) (((self->ptrCbs)[cbID]).uint16PlFlashOfs - sizeof(spi_flash_cb_elem_head));   // header is not part of the payload data
 }
 
 
