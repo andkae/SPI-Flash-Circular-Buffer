@@ -442,14 +442,14 @@ static int test_add_append (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint16_t q
     memcpy(uint8PtrDat2, uint8PtrDat1, qSize);
     /* write into Q, bytewise */
     for ( uint16_t i = 0; i < qSize; i++ ) {
+        // check internal append offset
+        if ( i != sfcb_get_pl_wrcnt(sfcb, qNum) ) { // i+1: post loop increment
+            printf("ERROR:%s:run_sfcb_add:sfcb_get_pl_wrcnt: wrong write count, exp=%i, is=%i", __FUNCTION__, i, sfcb_get_pl_wrcnt(sfcb, qNum));
+            return -1;
+        }
         // run_sfcb_add_append (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint8_t* data, uint16_t len)
         if ( 0 != run_sfcb_add_append (flash, sfcb, qNum, uint8PtrDat1+i, 1) ) {
             printf("ERROR:%s:run_sfcb_add: add byte=%d failed", __FUNCTION__, i);
-            return -1;
-        }
-        // check internal append offset
-        if ( (i+1) != sfcb_get_pl_wrcnt(sfcb, qNum) ) { // i+1: post loop increment
-            printf("ERROR:%s:run_sfcb_add:sfcb_get_pl_wrcnt: wrong write count, exp=%i, is=%i", __FUNCTION__, (i+1), sfcb_get_pl_wrcnt(sfcb, qNum));
             return -1;
         }
         // check for error
