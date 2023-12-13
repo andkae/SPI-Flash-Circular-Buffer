@@ -1,0 +1,44 @@
+# ***********************************************************************
+# @copyright    : Siemens AG
+# @license      : BSDv3
+# @author       : Andreas Kaeberlein
+# @address      : Clemens-Winkler-Strasse 3, 09116 Chemnitz
+#
+# @maintainer   : Andreas Kaeberlein
+# @telephone    : +49 371 4810-2108
+# @email        : andreas.kaeberlein@siemens.com
+#
+# @file         : test.yml
+# @date         : 2023-12-13
+# @see          : https://github.com/andkae/SPI-Flash-Circular-Buffer
+#
+# @brief        : Build and Run test
+#
+# **********************************************************************/
+
+
+name: Test
+
+on:
+  push:
+    paths-ignore:
+      - 'doc/**'
+      - 'README.md'
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, ubuntu-22.04, ubuntu-20.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0            # allow fetch tags, needed by 'git describe'
+      - name: OS Version
+        run: cat /etc/os-release
+      - name: Build
+        run: make
+      - name: Run
+        run: ./test/sfcb_test
