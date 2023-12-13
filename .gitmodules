@@ -1,0 +1,3 @@
+[submodule "test/spi_flash_model"]
+	path = test/spi_flash_model
+	url = https://github.com/akaeba/spi_flash_model.git
