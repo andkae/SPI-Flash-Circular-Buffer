@@ -2,7 +2,7 @@
 
 
 # SPI Flash Circular Buffer
-C Library to transform a physcial SPI Flash into a logical circular buffer. The interface between the _SFCB_ and the SPI core
+C Library to transform a physical SPI Flash into a logical circular buffer. The interface between the _SFCB_ and the SPI core
 is realized as shared memory.
 
 
