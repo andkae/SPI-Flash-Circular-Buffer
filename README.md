@@ -25,5 +25,8 @@ and SPI core is realized as shared memory.
 tbd.
 
 
+## Memory organisation
+tbd.
+
 ## References
   * [W25Q16JV](https://www.winbond.com/hq/support/documentation/downloadV2022.jsp?__locale=en&xmlPath=/support/resources/.content/item/DA00-W25Q16JV_1.html&level=1)
