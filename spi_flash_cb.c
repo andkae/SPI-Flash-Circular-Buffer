@@ -175,7 +175,6 @@ int sfcb_init (t_sfcb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen
     }
     sfcb_printf("  INFO:%s: flash '%s' selected\n", __FUNCTION__, SFCB_FLASH_NAME);
     /* set up list of flash circular buffers */
-    self->uint8FlashPresent = 0;    // not flash found
     self->uint8NumCbs = cbLen;
     self->uint16SpiLen = 0;
     self->uint8Busy = 0;
@@ -484,6 +483,10 @@ void sfcb_worker (t_sfcb *self)
                     sfcb_wip_poll(self);
                     self->stage = SFCB_STG00;
                     return;
+                /* write footer */
+                
+                
+                
                 /* something strange happend */
                 default:
                     sfcb_printf("  ERROR:%s:ADD: default, something strange happend\n", __FUNCTION__);
@@ -664,6 +667,7 @@ int sfcb_new_cb (t_sfcb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_
     (self->ptrCbs[cbNew]).uint32StopSector = (self->ptrCbs[cbNew]).uint32StartSector+uint16NumSectors-1;
     (self->ptrCbs[cbNew]).uint16NumEntriesMax = (uint16_t) (uint16NumSectors*uint8PagesPerSector) / (self->ptrCbs[cbNew]).uint16NumPagesPerElem;
     (self->ptrCbs[cbNew]).uint16NumEntries = 0;
+    (self->ptrCbs[cbNew]).uint16PlSize = elemSizeByte;  // element size, needed to determine footer write
     *cbID = cbNew;
     /* check if stop sector is in total size */
     if ( ((self->ptrCbs[cbNew]).uint32StopSector+1) * SFCB_FLASH_TOPO_SECTOR_SIZE > SFCB_FLASH_TOPO_FLASH_SIZE ) {

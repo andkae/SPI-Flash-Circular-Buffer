@@ -157,6 +157,7 @@ typedef struct t_sfcb_cb
     uint16_t    uint16NumEntriesMax;        /**< Maximal Number of entries in circular buffer caused by partition table */
     uint16_t    uint16NumEntries;           /**< Number of entries in circular buffer */
     uint16_t    uint16PlFlashOfs;           /**< Stores offset in flash payload, enables splitted append operations */
+    uint16_t    uint16PlSize;               /**< Size of Payload stored in the circular bufer, needed for footer write */
 } t_sfcb_cb;
 
 
@@ -173,7 +174,6 @@ typedef struct t_sfcb_cb
  */
 typedef struct t_sfcb
 {
-    uint8_t         uint8FlashPresent;      /**< checks if selected flashtype is available */
     uint8_t         uint8NumCbs;            /**< number of circular buffers */
     t_sfcb_cb*      ptrCbs;                 /**< List with flash circular buffer management info, #t_sfcb_cb */
     uint8_t*        uint8PtrSpi;            /**< SPI/CB layer interaction buffer */
