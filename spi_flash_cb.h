@@ -187,7 +187,6 @@ typedef struct t_sfcb
     t_sfcb_stage    stage;                  /**< Execution stage, from last interaction, #t_sfcb_stage */
     t_sfcb_error    error;                  /**< Error code if somehting strange happend, #t_sfcb_error */
     void*           ptrCbElemPl;            /**< Pointer to Payload data of CB Element */
-    uint16_t        uint16DataLen;          /**< data length */
     uint16_t        uint16CbElemPlSize;     /**< Size of payload data in bytes */
 } t_sfcb;
 
