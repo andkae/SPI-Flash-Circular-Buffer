@@ -214,18 +214,17 @@ int sfcb_init (t_sfcb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen
 void sfcb_worker (t_sfcb *self)
 {
     /** Variables **/
-    spi_flash_cb_elem_head* cbHead = (spi_flash_cb_elem_head*) (self->uint8PtrSpi+SFCB_FLASH_TOPO_ADR_BYTE+1);  // assign spi buffer to head structure, +: 1 byte instruction + address bytes
     uint8_t                 uint8Good;              // check was good
     uint16_t                uint16PagesBytesAvail;  // number of used page bytes
     uint16_t                uint16CpyLen;           // number of Bytes to copy
     uint32_t                uint32Temp;             // temporaray 32bit variable
     spi_flash_cb_elem_head  writeHead;              // header/footer written to flash
+    spi_flash_cb_elem_head  readHead;               // header readen from flash
 
     /* Function call message */
     sfcb_printf("__FUNCTION__ = %s\n", __FUNCTION__);
     sfcb_printf("  INFO:%s:sfcb_p            = %p\n", __FUNCTION__, self);
     sfcb_printf("  INFO:%s:sfcb:spi_p        = %p\n", __FUNCTION__, self->uint8PtrSpi); // spi buffer
-    sfcb_printf("  INFO:%s:sfcb:spi:cbHead_p = %p\n", __FUNCTION__, cbHead);            // spi packet casted to header
     /* select part of FSM */
     switch (self->cmd) {
         /*
@@ -269,24 +268,26 @@ void sfcb_worker (t_sfcb *self)
                             sfcb_printf("0x%x ", self->uint8PtrSpi[i]);
                         }
                         sfcb_printf("\n");
-                        sfcb_printf("  INFO:%s:MKCB:STG1: CBHEAD,magicnum=0x%x\n", __FUNCTION__, cbHead->uint32MagicNum);
+                        /* copy head from SPI packet*/
+                        memcpy(&readHead, self->uint8PtrSpi+SFCB_FLASH_TOPO_ADR_BYTE+1, sizeof(readHead));  // ensure alignment to processor architecture
+                        sfcb_printf("  INFO:%s:MKCB:STG1: RDHEAD,magicnum=0x%x\n", __FUNCTION__, readHead.uint32MagicNum);
                         /* Flash Area is used by circular buffer, check magic number
                          *   +4: Read instruction + 32bit address
                          */
-                        if ( cbHead->uint32MagicNum == ((self->ptrCbs)[self->uint8IterCb]).uint32MagicNum ) {
+                        if ( readHead.uint32MagicNum == ((self->ptrCbs)[self->uint8IterCb]).uint32MagicNum ) {
                             /* Debug Message */
                             sfcb_printf("  INFO:%s:MKCB:STG1: Valid Entry Found\n", __FUNCTION__);
                             /* count available elements */
                             (((self->ptrCbs)[self->uint8IterCb]).uint16NumEntries)++;
                             /* get highest number of numbered circular buffer elements, needed for next entry */
-                            if ( cbHead->uint32IdNum > ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax ) {
+                            if ( readHead.uint32IdNum > ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax ) {
                                 /* save new highest number in circular buffer */
-                                ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax = cbHead->uint32IdNum;
+                                ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax = readHead.uint32IdNum;
                                 ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageIdMax = self->uint32IterAdr; // needed by sfcb_get_last
                             }
                             /* get lowest number of circular buffer, needed for erase sector, and start get function */
-                            if ( cbHead->uint32IdNum < ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin ) {
-                                ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin = cbHead->uint32IdNum;
+                            if ( readHead.uint32IdNum < ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin ) {
+                                ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin = readHead.uint32IdNum;
                                 ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageIdMin = self->uint32IterAdr; // needed by Sector-Erase
                             }
                         } else {
