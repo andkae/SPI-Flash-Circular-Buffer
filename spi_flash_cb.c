@@ -219,7 +219,7 @@ void sfcb_worker (t_sfcb *self)
     uint16_t                uint16PagesBytesAvail;  // number of used page bytes
     uint16_t                uint16CpyLen;           // number of Bytes to copy
     uint32_t                uint32Temp;             // temporaray 32bit variable
-    spi_flash_cb_elem_head  head;                   // circular buffer element header
+    spi_flash_cb_elem_head  writeHead;              // header/footer written to flash
 
     /* Function call message */
     sfcb_printf("__FUNCTION__ = %s\n", __FUNCTION__);
@@ -422,17 +422,23 @@ void sfcb_worker (t_sfcb *self)
                     /* WIP Check */
                     if ( 0 != sfcb_wip_poll(self) ) return;
                     /* free for new request */
-                    self->stage = SFCB_STG01;   // Go one with search for Free Segment
-                    FALL_THROUGH;               // Go one with next
+                    self->stage = SFCB_STG01;   // go on with enable write
+                    FALL_THROUGH;               // no SPI request required, therefore go on
                 /* Circular Buffer written, if not write enable */
                 case SFCB_STG01:
                     sfcb_printf("  INFO:%s:ADD:STG1: Circular Buffer completly written, if not write enable\n", __FUNCTION__);
-                    /* Page Requested to program */
-                    if ( self->uint16Iter < self->uint16CbElemPlSize ) {
-                        /* enable WRITE Latch */
-                        self->uint8PtrSpi[0] = SFCB_FLASH_IST_WR_ENA;   // uint8FlashIstWrEnable
-                        self->uint16SpiLen = 1;
-                        self->stage = SFCB_STG02;   // Page Write as next
+                    /* Speculative expect Write, Enable Write Latch */
+                    self->uint8PtrSpi[0] = SFCB_FLASH_IST_WR_ENA;   // uint8FlashIstWrEnable
+                    self->uint16SpiLen = 1;
+                    /* Header/Footer write required */
+                    if (    (self->uint32IterAdr == ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageWrite)   // Start of Circular Buffer Write
+                         || (((self->ptrCbs)[self->uint8IterCb]).uint16PlFlashOfs == (((self->ptrCbs)[self->uint8IterCb]).uint16PlSize + sizeof(spi_flash_cb_elem_head)))   // End of Circular Buffer Write
+                    ) {
+                        self->stage = SFCB_STG02;   // Write Header/Footer
+                        return;
+                    /* Page Requested to program or footer write */
+                    } else if ( (self->uint16Iter < self->uint16CbElemPlSize) ) {
+                        self->stage = SFCB_STG03;   // Write Payload as next
                         return;
                     /* circular buffer written */
                     } else {
@@ -445,22 +451,43 @@ void sfcb_worker (t_sfcb *self)
                     break;
                 /* Page Write to Circular Buffer */
                 case SFCB_STG02:
-                    sfcb_printf("  INFO:%s:ADD:STG2: Page Write to Circular Buffer, adr=0x%x, payload,len=%d\n", __FUNCTION__, self->uint32IterAdr, self->uint16CbElemPlSize);
+                    sfcb_printf("  INFO:%s:ADD:STG2: Write Header/Footer to Flash, adr=0x%x, payload,len=%d\n", __FUNCTION__, self->uint32IterAdr, (uint32_t) sizeof(writeHead));
+                    /* assemble Header/ Footer */
+                    memset(&writeHead, 0, sizeof(writeHead)); // make empty
+                    writeHead.uint32MagicNum = ((self->ptrCbs)[self->uint8IterCb]).uint32MagicNum;
+                    writeHead.uint32IdNum = ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax + 1;
+                    /* Page Write */
+                    self->uint8PtrSpi[0] = SFCB_FLASH_IST_WR_PAGE;
+                    self->uint16SpiLen = 1;
+                    /* Footer? */
+                    if ( ((self->ptrCbs)[self->uint8IterCb]).uint16PlFlashOfs == (((self->ptrCbs)[self->uint8IterCb]).uint16PlSize + sizeof(spi_flash_cb_elem_head)) ) {
+                        self->uint32IterAdr =   ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageWrite
+                                              + ((self->ptrCbs)[self->uint8IterCb]).uint16NumPagesPerElem * (uint32_t) SFCB_FLASH_TOPO_PAGE_SIZE
+                                              - (uint32_t) sizeof(writeHead);
+                        ++(((self->ptrCbs)[self->uint8IterCb]).uint16PlFlashOfs);   // footer write is only entered one time
+                    } else {    // Header
+                        ((self->ptrCbs)[self->uint8IterCb]).uint16PlFlashOfs = (uint16_t) (((self->ptrCbs)[self->uint8IterCb]).uint16PlFlashOfs + sizeof(writeHead));
+                    }
+                    /* SPI Packet: Set address */
+                    sfcb_adr32_uint8(self->uint32IterAdr, self->uint8PtrSpi+self->uint16SpiLen, SFCB_FLASH_TOPO_ADR_BYTE); 
+                    (self->uint16SpiLen) = (uint16_t) ((self->uint16SpiLen) + SFCB_FLASH_TOPO_ADR_BYTE);
+                    /* SPI Packet: Copy Payload*/
+                    memcpy((self->uint8PtrSpi+self->uint16SpiLen), &writeHead, sizeof(writeHead));
+                    (self->uint16SpiLen) = (uint16_t) ((self->uint16SpiLen) + sizeof(writeHead));
+                    /* Update Flash Address Counter */
+                    (self->uint32IterAdr) += (uint32_t) sizeof(writeHead);
+                    /* Go to wait for WIP */
+                    self->stage = SFCB_STG04;
+                    return;
+                /* Page Write to Circular Buffer */
+                case SFCB_STG03:
+                    sfcb_printf("  INFO:%s:ADD:STG3: Page Write to Circular Buffer, adr=0x%x, payload,len=%d\n", __FUNCTION__, self->uint32IterAdr, self->uint16CbElemPlSize);
                     /* assemble Flash Instruction packet */
                     self->uint8PtrSpi[0] = SFCB_FLASH_IST_WR_PAGE;  // write page
                     sfcb_adr32_uint8(self->uint32IterAdr, self->uint8PtrSpi+1, SFCB_FLASH_TOPO_ADR_BYTE);   // +1 first byte is instruction
                     self->uint16SpiLen = SFCB_FLASH_TOPO_ADR_BYTE + 1;  // +1: IST
                     /* get available bytes in page */
                     uint16PagesBytesAvail = (uint16_t) (SFCB_FLASH_TOPO_PAGE_SIZE - (self->uint32IterAdr % SFCB_FLASH_TOPO_PAGE_SIZE));
-                    /* on first packet add header */
-                    if ( 0 == ((self->ptrCbs)[self->uint8IterCb]).uint16PlFlashOfs ) {
-                        memset(&head, 0, sizeof(head)); // make empty
-                        head.uint32MagicNum = ((self->ptrCbs)[self->uint8IterCb]).uint32MagicNum;
-                        head.uint32IdNum = ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax + 1;
-                        memcpy((self->uint8PtrSpi+self->uint16SpiLen), &head, sizeof(head));
-                        self->uint16SpiLen = (uint16_t) (self->uint16SpiLen + sizeof(head));
-                        uint16PagesBytesAvail = (uint16_t) (uint16PagesBytesAvail - sizeof(head));
-                    }
                     /* determine number of bytes to copy */
                     if ( (self->uint16CbElemPlSize - self->uint16Iter) > uint16PagesBytesAvail ) {
                         uint16CpyLen = uint16PagesBytesAvail;
@@ -475,18 +502,13 @@ void sfcb_worker (t_sfcb *self)
                     ((self->ptrCbs)[self->uint8IterCb]).uint16PlFlashOfs = (uint16_t) (((self->ptrCbs)[self->uint8IterCb]).uint16PlFlashOfs + self->uint16SpiLen - SFCB_FLASH_TOPO_ADR_BYTE - 1);   // payload internal flash offset
                     self->uint32IterAdr = self->uint32IterAdr + self->uint16SpiLen - SFCB_FLASH_TOPO_ADR_BYTE - 1;  // inc flash address by written data, reduced by SPI Flash instruction
                     /* Go to wait WIP */
-                    self->stage = SFCB_STG03;
+                    self->stage = SFCB_STG04;
                     return;
-                /* check for WIP, sfcb_wip_poll check for spiLen=0, therefore additional state necessary */
-                case SFCB_STG03:
-                    self->uint16SpiLen = 0; // needed for WIP poll packet
-                    sfcb_wip_poll(self);
+                /* check for WIP, sfcb_wip_poll works only for spiLen=0, therefore additional state necessary */
+                case SFCB_STG04:
+                    self->uint16SpiLen = 0; // needed for WIP poll packet generation in STG00
                     self->stage = SFCB_STG00;
                     return;
-                /* write footer */
-                
-                
-                
                 /* something strange happend */
                 default:
                     sfcb_printf("  ERROR:%s:ADD: default, something strange happend\n", __FUNCTION__);

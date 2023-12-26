@@ -86,7 +86,8 @@ typedef enum
     SFCB_STG00, /**<  Stage 0, different meanings based on executed command */
     SFCB_STG01, /**<  Stage 1, different meanings based on executed command */
     SFCB_STG02, /**<  Stage 2, different meanings based on executed command */
-    SFCB_STG03  /**<  Stage 3, different meanings based on executed command */
+    SFCB_STG03, /**<  Stage 3, different meanings based on executed command */
+    SFCB_STG04  /**<  Stage 4, different meanings based on executed command */
 } t_sfcb_stage;
 
 
