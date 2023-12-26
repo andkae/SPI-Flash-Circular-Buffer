@@ -37,9 +37,9 @@
 
 /** Globals **/
 const uint32_t  g_uint32SpiFlashCycleOut = 1000;    // abort calling SPI flash
-const uint16_t  g_uint16CbQ0Size = 244;             // CB Q0 Payload size
-const uint16_t  g_uint16CbQ1Size = 12280;           // CB Q1 Payload size
-uint8_t         g_uint8Spi[266];                    // SPI packet buffer
+const uint16_t  g_uint16CbQ0Size = 256 - 2*sizeof(spi_flash_cb_elem_head);      // CB Q0 Payload size
+const uint16_t  g_uint16CbQ1Size = 16384 - 2*sizeof(spi_flash_cb_elem_head);    // CB Q1 Payload size
+uint8_t         g_uint8Spi[266];    // SPI packet buffer
 
 
 
@@ -236,6 +236,16 @@ static int run_sfcb_add (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint8_t* data
             return -1;
         }
     }
+    /* mark q element as finished */
+    if ( 0 != sfcb_add_done(sfcb, qNum) ) {
+        printf("ERROR:%s:sfcb_add_done failed to start", __FUNCTION__);
+        return -1;
+    }
+         // run_sfm_update (t_sfm* flash, t_sfcb* sfcb)
+    if ( 0 != run_sfm_update(flash, sfcb) ) {
+        printf("ERROR:%s:run_sfm_update\n", __FUNCTION__);
+        return -1;
+    }
     /* rebuild managment data */
     if ( 0 != sfcb_mkcb(sfcb) ) {
         printf("ERROR:%s:sfcb_mkcb failed to start", __FUNCTION__);
@@ -287,7 +297,7 @@ static int run_sfcb_add_append (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint8_
     }
     memcpy(uint8PtrData, data, len);
     /* write into Q */
-    if ( 0 != sfcb_add_append(sfcb, qNum, data, len) ) {
+    if ( 0 != sfcb_add(sfcb, qNum, data, len) ) {
         printf("ERROR:%s:sfcb_add failed to start", __FUNCTION__);
         return -1;
     }
@@ -437,14 +447,14 @@ static int test_add_append (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint16_t q
     uint8PtrDat1 = malloc(qSize);   // reference buffer
     uint8PtrDat2 = malloc(qSize);   // data buffer
     for ( uint16_t i = 0; i < qSize; i++ ) {    // create random numbers
-        uint8PtrDat1[i] = (uint8_t) (rand() % 256);
+        uint8PtrDat1[i] = (uint8_t) (i % 256);
     }
     memcpy(uint8PtrDat2, uint8PtrDat1, qSize);
     /* write into Q, bytewise */
     for ( uint16_t i = 0; i < qSize; i++ ) {
         // check internal append offset
         if ( i != sfcb_get_pl_wrcnt(sfcb, qNum) ) { // i+1: post loop increment
-            printf("ERROR:%s:run_sfcb_add:sfcb_get_pl_wrcnt: wrong write count, exp=%i, is=%i", __FUNCTION__, i, sfcb_get_pl_wrcnt(sfcb, qNum));
+            printf("ERROR:%s:run_sfcb_add:sfcb_get_pl_wrcnt: wrong write count, exp=%i, is=%i\n", __FUNCTION__, i, sfcb_get_pl_wrcnt(sfcb, qNum));
             return -1;
         }
         // run_sfcb_add_append (t_sfm* flash, t_sfcb* sfcb, uint8_t qNum, uint8_t* data, uint16_t len)
