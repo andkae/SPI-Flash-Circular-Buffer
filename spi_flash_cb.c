@@ -787,34 +787,40 @@ int sfcb_mkcb (t_sfcb *self)
 
 
 /**
- *  sfcb_add
- *    inserts element into circular buffer, one time write
+ *  sfcb_add_append
+ *    inserts element into circular buffer in multiple writes
+ *    in case of prematurely finish circular buffer element run #sfcb_add_done
  */
 int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
 {
+    /* Function call message */
+    sfcb_printf("__FUNCTION__ = %s\n", __FUNCTION__);
     /* no jobs pending */
     if ( 0 != self->uint8Busy ) {
         sfcb_printf("  ERROR:%s: Worker is busy\n", __FUNCTION__);
         return SFCB_E_WKR_BSY;  // Worker is busy, wait for processing last job
     }
+    /* check if requested circular buffer queue exist */
     if ( !(cbID < self->uint8NumCbs) ) {
         sfcb_printf("  ERROR:%s: Circular buffer queue not active or present\n", __FUNCTION__);
         return SFCB_E_NO_CB_Q;  // circular buffer queue not present
     }
     /* check if CB is init for request */
-    if ( (0 == ((self->ptrCbs)[cbID]).uint8Used) || (0 == ((self->ptrCbs)[cbID]).uint8MgmtValid) ) {
+    if (    (0 == ((self->ptrCbs)[cbID]).uint8Used) 
+         || ( ((self->ptrCbs)[cbID]).uint16PlFlashOfs >= (((self->ptrCbs)[cbID]).uint16PlSize + sizeof(spi_flash_cb_elem_head)) ) 
+    ) {
         sfcb_printf("  ERROR:%s: Circular Buffer is not prepared for request\n", __FUNCTION__);
         return SFCB_E_WKR_REQ;  // Circular Buffer is not prepared for adding new element, run #sfcb_worker
     }
     /* check for match into circular buffer size */
-    if ( len > (((self->ptrCbs)[cbID]).uint16NumPagesPerElem * SFCB_FLASH_TOPO_PAGE_SIZE) ) {
+    if ( (len + ((self->ptrCbs)[cbID]).uint16PlFlashOfs) > (((self->ptrCbs)[cbID]).uint16NumPagesPerElem * SFCB_FLASH_TOPO_PAGE_SIZE) ) {
         sfcb_printf("  ERROR:%s: data segement is larger then reserved circular buffer space\n", __FUNCTION__);
         return SFCB_E_MEM;  // data segement is larger then reserved circular buffer space
     }
     /* store information for insertion */
     self->uint8IterCb = cbID;   // used as pointer to queue
     ((self->ptrCbs)[self->uint8IterCb]).uint8MgmtValid = 0; // mark queue as dirty, for next write run #sfcb_mkcb
-    self->uint32IterAdr = ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageWrite; // select page to write
+    self->uint32IterAdr = ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageWrite + ((self->ptrCbs)[self->uint8IterCb]).uint16PlFlashOfs;  // select page for write
     self->ptrCbElemPl = data;
     self->uint16CbElemPlSize = len;
     self->uint16Iter = 0;   // used as ptrCbElemPl written pointer
@@ -830,11 +836,18 @@ int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
 
 
 /**
- *  sfcb_add_append
- *    inserts element into circular buffer in multiple writes
+ *  sfcb_add_done
+ *    force footer write into flash if at leat one payload byte is written
+ *    and the nominal payload size isn't reached
  */
-int sfcb_add_append (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
+int sfcb_add_done (t_sfcb *self, uint8_t cbID)
 {
+    /* Function call message */
+    sfcb_printf("__FUNCTION__ = %s\n", __FUNCTION__);
+    /* Footer still written? */
+    if ( ((self->ptrCbs)[self->uint8IterCb]).uint16PlFlashOfs >= (((self->ptrCbs)[self->uint8IterCb]).uint16PlSize + sizeof(spi_flash_cb_elem_head)) ) {
+        return SFCB_OK; // footer is still written, nothing to do
+    }
     /* no jobs pending */
     if ( 0 != self->uint8Busy ) {
         sfcb_printf("  ERROR:%s: Worker is busy\n", __FUNCTION__);
@@ -844,18 +857,18 @@ int sfcb_add_append (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
         sfcb_printf("  ERROR:%s: Circular buffer queue not active or present\n", __FUNCTION__);
         return SFCB_E_NO_CB_Q;  // circular buffer queue not present
     }
-    /* check for match into circular buffer size */
-    if ( len > (((self->ptrCbs)[cbID]).uint16NumPagesPerElem * SFCB_FLASH_TOPO_PAGE_SIZE) ) {
-        sfcb_printf("  ERROR:%s: data segement is larger then reserved circular buffer space\n", __FUNCTION__);
-        return SFCB_E_MEM;  // data segement is larger then reserved circular buffer space
+    /* check if CB is init for request */
+    if ( (0 != ((self->ptrCbs)[cbID]).uint8Used) && (0 != ((self->ptrCbs)[cbID]).uint8MgmtValid) ) {
+        sfcb_printf("  ERROR:%s: Circular buffer queue existent, but no payload bytes are present\n", __FUNCTION__);
+        return SFCB_E_CB_Q_MTY;  // Circular Buffer is not prepared for adding new element, run #sfcb_worker
     }
     /* store information for insertion */
     self->uint8IterCb = cbID;   // used as pointer to queue
-    ((self->ptrCbs)[self->uint8IterCb]).uint8MgmtValid = 0; // mark queue as dirty, for next write run #sfcb_mkcb
     self->uint32IterAdr = ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageWrite + ((self->ptrCbs)[self->uint8IterCb]).uint16PlFlashOfs;  // select page for write
-    self->ptrCbElemPl = data;
-    self->uint16CbElemPlSize = len;
+    self->ptrCbElemPl = NULL;
+    self->uint16CbElemPlSize = 0;
     self->uint16Iter = 0;   // used as ptrCbElemPl written pointer
+    ((self->ptrCbs)[self->uint8IterCb]).uint16PlFlashOfs = (uint16_t) (((self->ptrCbs)[self->uint8IterCb]).uint16PlSize + sizeof(spi_flash_cb_elem_head));   // force condition for footer writer, #sfcb_worker
     /* Setup new Job */
     self->uint8Busy = 1;
     self->cmd = SFCB_CMD_ADD;

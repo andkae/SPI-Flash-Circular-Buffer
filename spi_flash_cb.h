@@ -26,11 +26,11 @@
  *  function exit codes
  *  @{
  */
-#define SFCB_OK             (0)     /**< Function ends with okay */
+#define SFCB_OK             (0)     /**< Request accepted */
 #define SFCB_E_NO_FLASH     (1<<0)  /**< no flash type selected, use proper compile switch */
 #define SFCB_E_MEM          (1<<1)  /**< not enough memory to perform the desired interaction */
 #define SFCB_E_FLASH_FULL   (1<<2)  /**< Flash capacity exceeded */
-#define SFCB_E_WKR_BSY      (1<<3)  /**< Worker is Busy */
+#define SFCB_E_WKR_BSY      (1<<3)  /**< Worker is Busy, wait for processing last job. */
 #define SFCB_E_NO_CB_Q      (1<<4)  /**< circular buffer queue not active or present */
 #define SFCB_E_WKR_REQ      (1<<5)  /**< Circular Buffer is not prepared for request, run #sfcb_worker */
 #define SFCB_E_CB_Q_MTY     (1<<6)  /**< Cirular buffer queue has no valid entries */
@@ -309,20 +309,25 @@ int sfcb_mkcb (t_sfcb *self);
 
 
 /**
- *  @brief add element
+ *  @brief add element append
  *
- *  adds element to circular buffer structure
+ *  adds element to circular buffer structure with multiple writes into same circular buffer queue element
+ *    1) append(1) -> write one byte to payload segment OFS=0
+ *    2) append(1) -> write one byte to payload segment OFS=1
+ *    and so on...
+ *  in case of prematurely finish circular buffer element run #sfcb_add_done
  *
  *  @param[in,out]  self                handle, #t_sfcb
  *  @param[in]      cbID                Logical Number of Cicular Buffer queue
  *  @param[in]      *data               Pointer to data array which should add
  *  @param[in]      len                 size of *data in bytes
  *  @return         int                 state
- *  @retval         0                   Request accepted.
- *  @retval         1                   Worker is busy, wait for processing last job.
- *  @retval         2                   Circular Buffer is not prepared for adding new element, run #sfcb_worker.
- *  @retval         4                   Data segement is larger then reserved circular buffer space.
- *  @since          2022-07-28
+ *  @retval         #SFCB_OK            Request accepted.
+ *  @retval         #SFCB_E_WKR_BSY     Worker is busy, wait for processing last job.
+ *  @retval         #SFCB_E_NO_CB_Q     Circular buffer queue not active or present.
+ *  @retval         #SFCB_E_WKR_REQ     Circular Buffer is not prepared for request, run #sfcb_worker.
+ *  @retval         #SFCB_E_MEM         Not enough memory to perform the desired interaction.
+ *  @since          2023-09-13
  *  @author         Andreas Kaeberlein
  */
 int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len);
@@ -330,26 +335,22 @@ int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len);
 
 
 /**
- *  @brief add element append
+ *  @brief add append done
  *
- *  adds element to circular buffer structure with multiple writes into same page
- *    1) append(1) -> write one byte to payload segment OFS=0
- *    2) append(1) -> write one byte to payload segment OFS=1
- *    and so on...
+ *  force footer write into flash if at least one payload byte is written
+ *  and the nominal payload size isn't reached
  *
  *  @param[in,out]  self                handle, #t_sfcb
  *  @param[in]      cbID                Logical Number of Cicular Buffer queue
- *  @param[in]      *data               Pointer to data array which should add
- *  @param[in]      len                 size of *data in bytes
  *  @return         int                 state
- *  @retval         0                   Request accepted.
- *  @retval         1                   Worker is busy, wait for processing last job.
- *  @retval         2                   Circular Buffer is not prepared for adding new element, run #sfcb_worker.
- *  @retval         4                   Data segement is larger then reserved circular buffer space.
- *  @since          2023-09-13
+ *  @retval         #SFCB_OK            Request accepted.
+ *  @retval         #SFCB_E_WKR_BSY     Worker is busy, wait for processing last job.
+ *  @retval         #SFCB_E_NO_CB_Q     Circular buffer queue not active or present.
+ *  @retval         #SFCB_E_CB_Q_MTY    Cirular buffer queue has no valid entries.    
+ *  @since          2023-12-26
  *  @author         Andreas Kaeberlein
  */
-int sfcb_add_append (t_sfcb *self, uint8_t cbID, void *data, uint16_t len);
+int sfcb_add_done (t_sfcb *self, uint8_t cbID);
 
 
 
