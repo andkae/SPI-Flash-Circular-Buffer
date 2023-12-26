@@ -787,7 +787,7 @@ int sfcb_mkcb (t_sfcb *self)
 
 
 /**
- *  sfcb_add_append
+ *  sfcb_add
  *    inserts element into circular buffer in multiple writes
  *    in case of prematurely finish circular buffer element run #sfcb_add_done
  */
