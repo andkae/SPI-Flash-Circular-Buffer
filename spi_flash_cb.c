@@ -846,7 +846,7 @@ int sfcb_add_done (t_sfcb *self, uint8_t cbID)
     /* Function call message */
     sfcb_printf("__FUNCTION__ = %s\n", __FUNCTION__);
     /* Footer still written? */
-    if ( ((self->ptrCbs)[self->uint8IterCb]).uint16PlFlashOfs >= (((self->ptrCbs)[self->uint8IterCb]).uint16PlSize + sizeof(spi_flash_cb_elem_head)) ) {
+    if ( ((self->ptrCbs)[self->uint8IterCb]).uint16PlFlashOfs > (((self->ptrCbs)[self->uint8IterCb]).uint16PlSize + sizeof(spi_flash_cb_elem_head)) ) {
         return SFCB_OK; // footer is still written, nothing to do
     }
     /* no jobs pending */
