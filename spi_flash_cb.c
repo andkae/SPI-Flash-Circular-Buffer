@@ -10,6 +10,7 @@
 
  @file          : spi_flash_cb.c
  @date          : July 22, 2022
+ @see           : https://github.com/andkae/SPI-Flash-Circular-Buffer
 
  @brief         : SPI FLash Circular Buffer
                   Driver for handling Circular Buffers in SPI Flashes
@@ -470,7 +471,7 @@ void sfcb_worker (t_sfcb *self)
                         ((self->ptrCbs)[self->uint8IterCb]).uint16PlFlashOfs = (uint16_t) (((self->ptrCbs)[self->uint8IterCb]).uint16PlFlashOfs + sizeof(writeHead));
                     }
                     /* SPI Packet: Set address */
-                    sfcb_adr32_uint8(self->uint32IterAdr, self->uint8PtrSpi+self->uint16SpiLen, SFCB_FLASH_TOPO_ADR_BYTE); 
+                    sfcb_adr32_uint8(self->uint32IterAdr, self->uint8PtrSpi+self->uint16SpiLen, SFCB_FLASH_TOPO_ADR_BYTE);
                     (self->uint16SpiLen) = (uint16_t) ((self->uint16SpiLen) + SFCB_FLASH_TOPO_ADR_BYTE);
                     /* SPI Packet: Copy Payload*/
                     memcpy((self->uint8PtrSpi+self->uint16SpiLen), &writeHead, sizeof(writeHead));
@@ -658,7 +659,7 @@ int sfcb_new_cb (t_sfcb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_
 {
     /** help variables **/
     const uint8_t   uint8PagesPerSector = (uint8_t) (SFCB_FLASH_TOPO_SECTOR_SIZE / SFCB_FLASH_TOPO_PAGE_SIZE);
-    const uint16_t  elemTotalSize = (uint16_t) (elemSizeByte + sizeof(spi_flash_cb_elem_head)); // payload size + header size
+    const uint16_t  elemTotalSize = (uint16_t) (elemSizeByte + 2*sizeof(spi_flash_cb_elem_head));   // payload size + header/footer size
     uint8_t         cbNew;              // queue of circular buffer new entry number
     uint32_t        uint32StartSector;
     uint16_t        uint16NumSectors;
@@ -807,8 +808,8 @@ int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
         return SFCB_E_NO_CB_Q;  // circular buffer queue not present
     }
     /* check if CB is init for request */
-    if (    (0 == ((self->ptrCbs)[cbID]).uint8Used) 
-         || ( ((self->ptrCbs)[cbID]).uint16PlFlashOfs >= (((self->ptrCbs)[cbID]).uint16PlSize + sizeof(spi_flash_cb_elem_head)) ) 
+    if (    (0 == ((self->ptrCbs)[cbID]).uint8Used)
+         || ( ((self->ptrCbs)[cbID]).uint16PlFlashOfs >= (((self->ptrCbs)[cbID]).uint16PlSize + sizeof(spi_flash_cb_elem_head)) )
     ) {
         sfcb_printf("  ERROR:%s: Circular Buffer is not prepared for request\n", __FUNCTION__);
         return SFCB_E_WKR_REQ;  // Circular Buffer is not prepared for adding new element, run #sfcb_worker

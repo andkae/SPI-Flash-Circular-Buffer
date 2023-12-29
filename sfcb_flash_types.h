@@ -10,6 +10,7 @@
 
  @file          : sfcb_flash_types.h
  @date          : July 22, 2022
+ @see           : https://github.com/andkae/SPI-Flash-Circular-Buffer
 
  @brief         : Flash Type Defintion
                   Defines Flash Types, instructions and topology
