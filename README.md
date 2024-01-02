@@ -43,8 +43,8 @@ Initializes _SFCB_ common handle and assigns memory.
 | spiLen | _spi_ buffer size in bytes        |
 
 #### Return:
-Success: *== 0*
-Failure: *!= 0*
+* Success: *== 0*
+* Failure: *!= 0*
 
 
 ### Worker
@@ -52,18 +52,14 @@ Failure: *!= 0*
 void sfcb_worker (t_sfcb *self);
 ```
 
-Services circular buffer layer request and creation as well
-processing of the SPI packets. This function should calles
-an a time based schedule. The SPI data packet should use
-an ISR based dataflow.
+Services circular buffer layer request as well SPI packet processing.
+This function should called in a time based matter. 
+The SPI data packet transfer should use an ISR based dataflow.
 
 #### Arguments:
 | Arg  | Description            |
 | ---- | ---------------------- |
 | self | _SFCB_ storage element |
-
-#### Return:
-None.
 
 
 ### Flash Size
