@@ -18,7 +18,10 @@ and SPI core is realized as shared memory.
 | latest                                                 |            | <a id="raw-url" href="https://github.com/andkae/SPI-Flash-Circular-Buffer/archive/refs/heads/main.zip">latest.zip</a>  |                                                                                                                                                    |
 
 
-## How to use
+## Integrate
+
+
+## Build
 
 
 ## [API](./spi_flash_cb.h)
@@ -35,7 +38,7 @@ Initializes _SFCB_ common handle and assigns memory.
 | ------ | --------------------------------- |
 | self   | _SFCB_ storage element            |
 | cb     | Circular buffer queue memory      |
-| cbLen  | max number of _cb_ queues         |
+| cbLen  | max. number of _cb_ queues        |
 | spi    | _SFCB_ / SPI core exchange buffer |
 | spiLen | _spi_ buffer size in bytes        |
 
@@ -43,6 +46,35 @@ Initializes _SFCB_ common handle and assigns memory.
 Success: *== 0*
 Failure: *!= 0*
 
+
+### Worker
+```c
+void sfcb_worker (t_sfcb *self);
+```
+
+Services circular buffer layer request and creation as well
+processing of the SPI packets. This function should calles
+an a time based schedule. The SPI data packet should use
+an ISR based dataflow.
+
+#### Arguments:
+| Arg  | Description            |
+| ---- | ---------------------- |
+| self | _SFCB_ storage element |
+
+#### Return:
+None.
+
+
+### Flash Size
+```c
+uint32_t sfcb_flash_size (void);
+```
+
+Get _SFCB_ compiled flash type total size.
+
+#### Return:
+Size in bytes.
 
 
 
