@@ -22,7 +22,30 @@ and SPI core is realized as shared memory.
 
 
 ## [API](./spi_flash_cb.h)
-tbd.
+
+### Init
+```c
+int sfcb_init (t_sfcb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen);
+```
+
+Initializes _SFCB_ common handle and assigns memory.
+
+#### Arguments:
+| Arg    | Description                       |
+| ------ | --------------------------------- |
+| self   | _SFCB_ storage element            |
+| cb     | Circular buffer queue memory      |
+| cbLen  | max number of _cb_ queues         |
+| spi    | _SFCB_ / SPI core exchange buffer |
+| spiLen | _spi_ buffer size in bytes        |
+
+#### Return:
+Success: *== 0*
+Failure: *!= 0*
+
+
+
+
 
 
 ## Memory organisation
