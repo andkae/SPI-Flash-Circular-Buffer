@@ -38,7 +38,12 @@ jobs:
           fetch-depth: 0            # allow fetch tags, needed by 'git describe'
       - name: OS Version
         run: cat /etc/os-release
-      - name: Build
-        run: make
-      - name: Run
-        run: ./test/sfcb_test
+      - name: CI & Size
+        run: |
+          make ci
+          nm --print-size --size-sort --radix=d ./test/sfcb.o
+          make clean
+      - name: Test
+        run: |
+          make
+          ./test/sfcb_test
