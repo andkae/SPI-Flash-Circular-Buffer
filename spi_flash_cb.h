@@ -192,6 +192,7 @@ typedef struct t_sfcb
     uint16_t                uint16CbElemPlSize; /**< Size of payload data in bytes */
     spi_flash_cb_elem_head  head;               /**< Circular buffer queue elements inter transaction buffer */
     spi_flash_cb_elem_head  foot;               /**< Circular buffer queue elements inter transaction buffer, #sfcb_get_last element complete write check */
+    uint32_t                uint32LastElemTemp; /**< Temporary variable to store start address of successfull written element */
 } t_sfcb;
 
 
