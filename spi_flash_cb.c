@@ -101,7 +101,7 @@
  *  @since          July 25, 2022
  *  @author         Andreas Kaeberlein
  */
-static uint32_t sfcb_ceildivide_uint32(uint32_t dividend, uint32_t divisor)
+static uint32_t sfcb_ceildivide_uint32 (uint32_t dividend, uint32_t divisor)
 {
     if ( dividend != 0 ) {
         return ( 1 + ( (dividend-1) / divisor ) );
@@ -123,7 +123,7 @@ static uint32_t sfcb_ceildivide_uint32(uint32_t dividend, uint32_t divisor)
  *  @since          December 31, 2022
  *  @author         Andreas Kaeberlein
  */
-static void sfcb_adr32_uint8(uint32_t adr, uint8_t *spi, uint8_t adrBytes)
+static void sfcb_adr32_uint8 (uint32_t adr, uint8_t *spi, uint8_t adrBytes)
 {
     /* on highest index is lowest byte placed */
     for ( int8_t i = (int8_t) (adrBytes-1); i >= 0; i-- ) {
@@ -135,9 +135,9 @@ static void sfcb_adr32_uint8(uint32_t adr, uint8_t *spi, uint8_t adrBytes)
 
 
 /**
- *  @brief address translation
+ *  @brief write-in-progress check
  *
- *  converts 32bit SPI Flash address to SPI packet convenient byte sequence
+ *  assembles SPI packet and checks if in flash is write operation active
  *
  *  @param[in,out]  self                handle, #t_sfcb
  *  @return         int                 WIP packet required?
@@ -146,7 +146,7 @@ static void sfcb_adr32_uint8(uint32_t adr, uint8_t *spi, uint8_t adrBytes)
  *  @since          August 16, 2023
  *  @author         Andreas Kaeberlein
  */
-static int sfcb_wip_poll(t_sfcb *self)
+static int sfcb_spi_wip_poll (t_sfcb *self)
 {
     if ( (0 == self->uint16SpiLen) || (0 != (self->uint8PtrSpi[1] & SFCB_FLASH_MNG_WIP_MSK)) ) {
         /* First Request or WIP */
@@ -157,6 +157,54 @@ static int sfcb_wip_poll(t_sfcb *self)
     }
     self->uint16SpiLen = 0;
     return 0;
+}
+
+
+
+/**
+ *  @brief flash address queue element header calculation
+ *
+ *  calculates based on flash topology and circular buffer settings the belonging
+ *  physical flash address
+ *
+ *  @param[in,out]  self                handle, #t_sfcb
+ *  @param[in]      elem                physical element number in queue
+ *  @return         uint32_t            flash address of header from circular buffer element
+ *  @since          August 17, 2024
+ *  @author         Andreas Kaeberlein
+ */
+static uint32_t sfcb_flash_adr_head (t_sfcb *self, uint16_t elem)
+{
+    /** Variables **/
+    uint32_t    adr;
+    /* calculate address */
+    adr =   ((self->ptrCbs)[self->uint8IterCb]).uint32StartSector * (uint32_t) SFCB_FLASH_TOPO_SECTOR_SIZE  // start address of circular buffer queue
+            +
+            ((self->ptrCbs)[self->uint8IterCb]).uint16NumPagesPerElem * (uint32_t) SFCB_FLASH_TOPO_PAGE_SIZE * elem;    // offset based on element count
+    /* return header address */
+    return adr;
+}
+
+
+
+/**
+ *  @brief SPI packet header request
+ *
+ *  assembles SPI packet to request circular buffer element header based on internal state
+ *  the spi packet takes places in the internal SPI buffer variable
+ *  @see #spi_flash_cb_elem_head
+ *
+ *  @param[in,out]  self                handle, #t_sfcb
+ *  @return         void
+ *  @since          August 17, 2024
+ *  @author         Andreas Kaeberlein
+ */
+static void sfcb_spi_get_head (t_sfcb *self)
+{
+    self->uint16SpiLen = SFCB_FLASH_TOPO_ADR_BYTE + 1 + sizeof(spi_flash_cb_elem_head);     // +1: IST, + Address bytes
+    memset(self->uint8PtrSpi, 0, self->uint16SpiLen);   // make empty
+    self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_DATA;      // Flash read instruction
+    sfcb_adr32_uint8(self->uint32IterAdr, self->uint8PtrSpi+1, SFCB_FLASH_TOPO_ADR_BYTE);   // serialize address into bytes, +1 first byte is instruction
 }
 
 
@@ -215,10 +263,10 @@ int sfcb_init (t_sfcb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen
 void sfcb_worker (t_sfcb *self)
 {
     /** Variables **/
-    uint8_t                 uint8Good;              // check was good
-    uint16_t                uint16PagesBytesAvail;  // number of used page bytes
-    uint16_t                uint16CpyLen;           // number of Bytes to copy
-    uint32_t                uint32Temp;             // temporary 32bit variable
+    uint8_t     uint8Good;              // check was good
+    uint16_t    uint16PagesBytesAvail;  // number of used page bytes
+    uint16_t    uint16CpyLen;           // number of Bytes to copy
+    uint32_t    uint32Temp;             // temporary 32bit variable
 
     /* Function call message */
     sfcb_printf("__FUNCTION__ = %s\n", __FUNCTION__);
@@ -245,23 +293,12 @@ void sfcb_worker (t_sfcb *self)
                 /* check for WIP */
                 case SFCB_STG00:
                     /* Debug message */
-                    sfcb_printf (  "  INFO:%s:MKCB:STG0:check for WIP, uint16SpiLen=%d, uint8PtrSpi[1]=0x%02x\n",
-                                   __FUNCTION__,
-                                   self->uint16SpiLen,
-                                   self->uint8PtrSpi[1]
-                                );
+                    sfcb_printf("  INFO:%s:MKCB:STG0: check for WIP, request first header\n", __FUNCTION__);
                     /* WIP Check */
-                    if ( 0 != sfcb_wip_poll(self) ) return;
-                    /* request first header of circular buffer */
-                    self->uint32IterAdr =   ((self->ptrCbs)[self->uint8IterCb]).uint32StartSector * (uint32_t) SFCB_FLASH_TOPO_SECTOR_SIZE
-                                            +
-                                            ((self->ptrCbs)[self->uint8IterCb]).uint16NumPagesPerElem *
-                                            (uint32_t) SFCB_FLASH_TOPO_PAGE_SIZE *
-                                            self->uint16Iter;
-                    self->uint16SpiLen = SFCB_FLASH_TOPO_ADR_BYTE + 1 + sizeof(spi_flash_cb_elem_head); // +1: IST, + Address bytes
-                    memset(self->uint8PtrSpi, 0, self->uint16SpiLen);
-                    self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_DATA;
-                    sfcb_adr32_uint8(self->uint32IterAdr, self->uint8PtrSpi+1, SFCB_FLASH_TOPO_ADR_BYTE);   // +1 first byte is instruction
+                    if ( 0 != sfcb_spi_wip_poll(self) ) return;
+                    /* Request first header of circular buffer element */
+                    self->uint32IterAdr = sfcb_flash_adr_head(self, self->uint16Iter);  // calculate physical flash address of first header of circular buffer queue
+                    sfcb_spi_get_head(self);    // assemble SPI packet
                     /* debug message */
                     sfcb_printf("  INFO:%s:MKCB:STG0:FLASH: adr=0x%x, len=%i", __FUNCTION__, self->uint32IterAdr, (uint32_t) sizeof(spi_flash_cb_elem_head));
                     /* first header request assembled
@@ -334,18 +371,10 @@ void sfcb_worker (t_sfcb *self)
                                   ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin,
                                   ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax
                                 );
-                    /* request footer of circular buffer */
-                    self->uint32IterAdr =   ((self->ptrCbs)[self->uint8IterCb]).uint32StartSector * (uint32_t) SFCB_FLASH_TOPO_SECTOR_SIZE
-                                            +
-                                            ((self->ptrCbs)[self->uint8IterCb]).uint16NumPagesPerElem *
-                                            (uint32_t) SFCB_FLASH_TOPO_PAGE_SIZE *
-                                            self->uint16Iter
-                                            -
-                                            (uint32_t) sizeof(spi_flash_cb_elem_head);
-                    self->uint16SpiLen = SFCB_FLASH_TOPO_ADR_BYTE + 1 + sizeof(spi_flash_cb_elem_head); // +1: IST, + Address bytes
-                    memset(self->uint8PtrSpi, 0, self->uint16SpiLen);
-                    self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_DATA;
-                    sfcb_adr32_uint8(self->uint32IterAdr, self->uint8PtrSpi+1, SFCB_FLASH_TOPO_ADR_BYTE);   // +1 first byte is instruction
+                    /* assemble footer request of circular buffer element */
+                    self->uint32IterAdr = sfcb_flash_adr_head(self, self->uint16Iter) - (uint32_t) sizeof(spi_flash_cb_elem_head);
+                    sfcb_spi_get_head(self);
+                    /* go on with footer evaluation and requesting next header */
                     self->stage = SFCB_STG02;
                     /* debug message */
                     sfcb_printf("  INFO:%s:MKCB:STG1:FLASH: adr=0x%x, len=%i\n", __FUNCTION__, self->uint32IterAdr, (uint32_t) sizeof(spi_flash_cb_elem_head));
@@ -371,15 +400,8 @@ void sfcb_worker (t_sfcb *self)
                         ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageIdMax = self->uint32LastElemAdr; // needed by sfcb_get_last
                     }
                     /* request next header of circular buffer */
-                    self->uint32IterAdr =   ((self->ptrCbs)[self->uint8IterCb]).uint32StartSector * (uint32_t) SFCB_FLASH_TOPO_SECTOR_SIZE
-                                            +
-                                            ((self->ptrCbs)[self->uint8IterCb]).uint16NumPagesPerElem *
-                                            (uint32_t) SFCB_FLASH_TOPO_PAGE_SIZE *
-                                            self->uint16Iter;
-                    self->uint16SpiLen = SFCB_FLASH_TOPO_ADR_BYTE + 1 + sizeof(spi_flash_cb_elem_head); // +1: IST, + Address bytes
-                    memset(self->uint8PtrSpi, 0, self->uint16SpiLen);
-                    self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_DATA;
-                    sfcb_adr32_uint8(self->uint32IterAdr, self->uint8PtrSpi+1, SFCB_FLASH_TOPO_ADR_BYTE);   // +1 first byte is instruction
+                    self->uint32IterAdr = sfcb_flash_adr_head(self, self->uint16Iter);
+                    sfcb_spi_get_head(self);
                     /* debug message */
                     sfcb_printf("  INFO:%s:MKCB:STG2:FLASH: adr=0x%x, len=%i\n", __FUNCTION__, self->uint32IterAdr, (uint32_t) sizeof(spi_flash_cb_elem_head));
                     /* prepare iterator for next */
@@ -470,7 +492,7 @@ void sfcb_worker (t_sfcb *self)
                 case SFCB_STG00:
                     sfcb_printf("  INFO:%s:ADD:STG0: check for WIP\n", __FUNCTION__);
                     /* WIP Check */
-                    if ( 0 != sfcb_wip_poll(self) ) return;
+                    if ( 0 != sfcb_spi_wip_poll(self) ) return;
                     /* free for new request */
                     self->stage = SFCB_STG01;   // go on with enable write
                     FALL_THROUGH;               // no SPI request required, therefore go on
@@ -554,7 +576,7 @@ void sfcb_worker (t_sfcb *self)
                     /* Go to wait WIP */
                     self->stage = SFCB_STG04;
                     return;
-                /* check for WIP, sfcb_wip_poll works only for spiLen=0, therefore additional state necessary */
+                /* check for WIP, #sfcb_spi_wip_poll works only for spiLen=0, therefore additional state necessary */
                 case SFCB_STG04:
                     self->uint16SpiLen = 0; // needed for WIP poll packet generation in STG00
                     self->stage = SFCB_STG00;
@@ -577,7 +599,7 @@ void sfcb_worker (t_sfcb *self)
                 case SFCB_STG00:
                     sfcb_printf("  INFO:%s:GET:STG0: check for WIP\n", __FUNCTION__);
                     /* WIP Check */
-                    if ( 0 != sfcb_wip_poll(self) ) return;
+                    if ( 0 != sfcb_spi_wip_poll(self) ) return;
                     /* free for new request */
                     self->stage = SFCB_STG01;   // Go one with search for Free Segment
                     FALL_THROUGH;               // Go one with next
@@ -640,7 +662,7 @@ void sfcb_worker (t_sfcb *self)
                 case SFCB_STG00:
                     sfcb_printf("  INFO:%s:RAW:STG0: check for WIP\n", __FUNCTION__);
                     /* WIP Check */
-                    if ( 0 != sfcb_wip_poll(self) ) return;
+                    if ( 0 != sfcb_spi_wip_poll(self) ) return;
                     /* free for new request */
                     self->stage = SFCB_STG01;   // Go one with search for Free Segment
                     FALL_THROUGH;               // Go one with stage
@@ -680,7 +702,7 @@ void sfcb_worker (t_sfcb *self)
             }
             return;
 
-        /* something strange happend */
+        /* something strange happened */
         default:
             return;
     }
