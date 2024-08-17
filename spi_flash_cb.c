@@ -252,71 +252,85 @@ void sfcb_worker (t_sfcb *self)
                                 );
                     /* WIP Check */
                     if ( 0 != sfcb_wip_poll(self) ) return;
-                    /* free for new request */
+                    /* request first header of circular buffer */
+                    self->uint32IterAdr =   ((self->ptrCbs)[self->uint8IterCb]).uint32StartSector * (uint32_t) SFCB_FLASH_TOPO_SECTOR_SIZE
+                                            +
+                                            ((self->ptrCbs)[self->uint8IterCb]).uint16NumPagesPerElem *
+                                            (uint32_t) SFCB_FLASH_TOPO_PAGE_SIZE *
+                                            self->uint16Iter;
+                    self->uint16SpiLen = SFCB_FLASH_TOPO_ADR_BYTE + 1 + sizeof(spi_flash_cb_elem_head); // +1: IST, + Address bytes
+                    memset(self->uint8PtrSpi, 0, self->uint16SpiLen);
+                    self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_DATA;
+                    sfcb_adr32_uint8(self->uint32IterAdr, self->uint8PtrSpi+1, SFCB_FLASH_TOPO_ADR_BYTE);   // +1 first byte is instruction
+                    /* debug message */
+                    sfcb_printf("  INFO:%s:MKCB:STG0:FLASH: adr=0x%x, len=%i", __FUNCTION__, self->uint32IterAdr, (uint32_t) sizeof(spi_flash_cb_elem_head));
+                    /* first header request assembled
+                     * now go for footer of first element, due calculation subtracts form next element start address the footer size is an
+                     * increment mandatory
+                     */
+                    (self->uint16Iter)++;
+                    /* build overview of circular buffer queue */
                     self->stage = SFCB_STG01;   // Go one with search for Free Segment
-                    FALL_THROUGH;   // Go one with next
-                /* Find Page for next Circular buffer element */
+                    return;
+                /* check header, find empty page for new element */
                 case SFCB_STG01:
-                    /* Debug message */
-                    sfcb_printf("  INFO:%s:MKCB:STG1: find empty page for new element\n", __FUNCTION__);
-                    /* check last response */
-                    if ( 0 != self->uint16SpiLen ) {
+                    /* Check header of CBQ element */
+                    sfcb_printf("  INFO:%s:MKCB:STG1: check header, request footer of queue element, find empty start page for new element\n", __FUNCTION__);
+                    sfcb_printf("  INFO:%s:MKCB:STG1:SPI: ", __FUNCTION__);
+                    for ( uint8_t i = 0; i < (uint8_t) (sizeof(spi_flash_cb_elem_head) + SFCB_FLASH_TOPO_ADR_BYTE + 1); i++ ) { // +1: SPI Flash IST
+                        sfcb_printf("0x%x ", self->uint8PtrSpi[i]);
+                    }
+                    sfcb_printf("\n");
+                    /* copy head from SPI packet*/
+                    memcpy(&(self->head), self->uint8PtrSpi+SFCB_FLASH_TOPO_ADR_BYTE+1, sizeof(self->head));  // ensure alignment to processor architecture
+                    sfcb_printf("  INFO:%s:MKCB:STG1: RDHEAD,magicnum=0x%x\n", __FUNCTION__, (self->head).uint32MagicNum);
+                    /* Flash Area is used by circular buffer, check magic number
+                     *   +4: Read instruction + 32bit address
+                     */
+                    if ( (self->head).uint32MagicNum == ((self->ptrCbs)[self->uint8IterCb]).uint32MagicNum ) {
                         /* Debug Message */
-                        sfcb_printf("  INFO:%s:MKCB:STG1: SPI ", __FUNCTION__);
-                        for ( uint8_t i = 0; i < (uint8_t) (sizeof(spi_flash_cb_elem_head) + SFCB_FLASH_TOPO_ADR_BYTE + 1); i++ ) { // +1: SPI Flash IST
-                            sfcb_printf("0x%x ", self->uint8PtrSpi[i]);
+                        sfcb_printf("  INFO:%s:MKCB:STG1: Valid Entry Found\n", __FUNCTION__);
+                        /* count available elements */
+                        (((self->ptrCbs)[self->uint8IterCb]).uint16NumEntries)++;
+                        /* get highest number of numbered circular buffer elements, needed for next entry */
+                        if ( (self->head).uint32IdNum > ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax ) {
+                            /* save new highest number in circular buffer */
+                            ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax = (self->head).uint32IdNum;
+                            self->uint32LastElemAdr = self->uint32IterAdr;  // store temporary, footer check pending, needed by sfcb_get_last
                         }
-                        sfcb_printf("\n");
-                        /* copy head from SPI packet*/
-                        memcpy(&(self->head), self->uint8PtrSpi+SFCB_FLASH_TOPO_ADR_BYTE+1, sizeof(self->head));  // ensure alignment to processor architecture
-                        sfcb_printf("  INFO:%s:MKCB:STG1: RDHEAD,magicnum=0x%x\n", __FUNCTION__, (self->head).uint32MagicNum);
-                        /* Flash Area is used by circular buffer, check magic number
-                         *   +4: Read instruction + 32bit address
+                        /* get lowest number of circular buffer, needed for erase sector, and start get function */
+                        if ( (self->head).uint32IdNum < ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin ) {
+                            ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin = (self->head).uint32IdNum;
+                            ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageIdMin = self->uint32IterAdr; // needed by Sector-Erase
+                        }
+                    } else {
+                        /* check for unused header
+                         * first unused pages is allocated, iterate over all elements to get all IDs
                          */
-                        if ( (self->head).uint32MagicNum == ((self->ptrCbs)[self->uint8IterCb]).uint32MagicNum ) {
-                            /* Debug Message */
-                            sfcb_printf("  INFO:%s:MKCB:STG1: Valid Entry Found\n", __FUNCTION__);
-                            /* count available elements */
-                            (((self->ptrCbs)[self->uint8IterCb]).uint16NumEntries)++;
-                            /* get highest number of numbered circular buffer elements, needed for next entry */
-                            if ( (self->head).uint32IdNum > ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax ) {
-                                /* save new highest number in circular buffer */
-                                ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax = (self->head).uint32IdNum;
-                                self->uint32LastElemTemp = self->uint32IterAdr; // store temporary, footer check pending, needed by sfcb_get_last
-                            }
-                            /* get lowest number of circular buffer, needed for erase sector, and start get function */
-                            if ( (self->head).uint32IdNum < ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin ) {
-                                ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin = (self->head).uint32IdNum;
-                                ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageIdMin = self->uint32IterAdr; // needed by Sector-Erase
-                            }
-                        } else {
-                            /* check for unused header
-                             * first unused pages is allocated, iterate over all elements to get all IDs
-                             */
-                            if ( 0 == ((self->ptrCbs)[self->uint8IterCb]).uint8MgmtValid ) {
-                                uint8Good = 1;
-                                for ( uint8_t i = SFCB_FLASH_TOPO_ADR_BYTE + 1; i < SFCB_FLASH_TOPO_ADR_BYTE + 1 + sizeof(spi_flash_cb_elem_head); i++ ) {  // +1: IST
-                                    /* corrupted empty page found, leave as it is */
-                                    if ( 0xFF != self->uint8PtrSpi[i] ) {
-                                        uint8Good = 0;  // try to find next free clean page
-                                        sfcb_printf ("  ERROR:%s:MKCB:STG1: corrupted empty page found at 0x%0x\n", __FUNCTION__, self->uint32IterAdr);
-                                        break;
-                                    }
+                        if ( 0 == ((self->ptrCbs)[self->uint8IterCb]).uint8MgmtValid ) {
+                            uint8Good = 1;
+                            for ( uint8_t i = SFCB_FLASH_TOPO_ADR_BYTE + 1; i < SFCB_FLASH_TOPO_ADR_BYTE + 1 + sizeof(spi_flash_cb_elem_head); i++ ) {  // +1: IST
+                                /* corrupted empty page found, leave as it is */
+                                if ( 0xFF != self->uint8PtrSpi[i] ) {
+                                    uint8Good = 0;  // try to find next free clean page
+                                    sfcb_printf ("  ERROR:%s:MKCB:STG1: corrupted empty page found at 0x%0x\n", __FUNCTION__, self->uint32IterAdr);
+                                    break;
                                 }
-                                /* save page number for next circular buffer entry */
-                                if ( 0 != uint8Good ) {
-                                    ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageWrite = self->uint32IterAdr;
-                                    ((self->ptrCbs)[self->uint8IterCb]).uint8MgmtValid = 1; // prepared for writing next element
-                                }
+                            }
+                            /* save page number for next circular buffer entry */
+                            if ( 0 != uint8Good ) {
+                                ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageWrite = self->uint32IterAdr;
+                                ((self->ptrCbs)[self->uint8IterCb]).uint8MgmtValid = 1; // prepared for writing next element
                             }
                         }
                     }
                     /* Current Status Message */
-                    sfcb_printf ( "  INFO:%s:MKCB:STG1: cb=%d, elem=%d, flashadr=0x%x, idmin=0x%x, idmax=0x%x\n",
+                    sfcb_printf ( "  INFO:%s:MKCB:STG1: cb=%d, elem=%d, flashadr=0x%x, idIs=0x%x, idMin=0x%x, idMax=0x%x\n",
                                   __FUNCTION__,
                                   self->uint8IterCb,
                                   self->uint16Iter,
                                   self->uint32IterAdr,
+                                  (self->head).uint32IdNum,
                                   ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin,
                                   ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax
                                 );
@@ -326,9 +340,6 @@ void sfcb_worker (t_sfcb *self)
                                             ((self->ptrCbs)[self->uint8IterCb]).uint16NumPagesPerElem *
                                             (uint32_t) SFCB_FLASH_TOPO_PAGE_SIZE *
                                             self->uint16Iter
-                                            +
-                                            ((self->ptrCbs)[self->uint8IterCb]).uint16NumPagesPerElem *
-                                            (uint32_t) SFCB_FLASH_TOPO_PAGE_SIZE
                                             -
                                             (uint32_t) sizeof(spi_flash_cb_elem_head);
                     self->uint16SpiLen = SFCB_FLASH_TOPO_ADR_BYTE + 1 + sizeof(spi_flash_cb_elem_head); // +1: IST, + Address bytes
@@ -336,18 +347,28 @@ void sfcb_worker (t_sfcb *self)
                     self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_DATA;
                     sfcb_adr32_uint8(self->uint32IterAdr, self->uint8PtrSpi+1, SFCB_FLASH_TOPO_ADR_BYTE);   // +1 first byte is instruction
                     self->stage = SFCB_STG02;
+                    /* debug message */
+                    sfcb_printf("  INFO:%s:MKCB:STG1:FLASH: adr=0x%x, len=%i\n", __FUNCTION__, self->uint32IterAdr, (uint32_t) sizeof(spi_flash_cb_elem_head));
                     return;
                 /* check footer, needed to ensure that #sfcb_get_last will get an complete circular buffer queue element */
                 case SFCB_STG02:
-                    sfcb_printf( "  INFO:%s:MKCB:STG2: check footer and prepare for next queue element\n", __FUNCTION__);
+                    /* Debug Message */
+                    sfcb_printf("  INFO:%s:MKCB:STG2: check footer, request header of next queue element\n", __FUNCTION__);
+                    sfcb_printf("  INFO:%s:MKCB:STG2:SPI: ", __FUNCTION__);
+                    for ( uint8_t i = 0; i < (uint8_t) (sizeof(spi_flash_cb_elem_head) + SFCB_FLASH_TOPO_ADR_BYTE + 1); i++ ) { // +1: SPI Flash IST
+                        sfcb_printf("0x%x ", self->uint8PtrSpi[i]);
+                    }
+                    sfcb_printf("\n");
                     /* copy from SPI packet */
                     memcpy(&(self->foot), self->uint8PtrSpi+SFCB_FLASH_TOPO_ADR_BYTE+1, sizeof(self->foot));
                     /* header = footer? if yes, cb element completely written */
                     if (    (0 == memcmp(&(self->foot), &(self->head), sizeof(self->head)))
-                         //&&   (self->foot).uint32MagicNum == ((self->ptrCbs)[self->uint8IterCb]).uint32MagicNum
+                         && (self->foot).uint32MagicNum == ((self->ptrCbs)[self->uint8IterCb]).uint32MagicNum
                     ) {
-                        sfcb_printf( "  INFO:%s:MKCB:STG2: header and footer are equal and not empty last, successfull written element is adr=%x\n", __FUNCTION__, self->uint32LastElemTemp);
-                        ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageIdMax = self->uint32LastElemTemp; // needed by sfcb_get_last
+                        sfcb_printf (   "  INFO:%s:MKCB:STG2:head/foot: compare pass, successful last written element is at flash adr=0x%x\n",
+                                        __FUNCTION__, self->uint32LastElemAdr
+                                    );
+                        ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageIdMax = self->uint32LastElemAdr; // needed by sfcb_get_last
                     }
                     /* request next header of circular buffer */
                     self->uint32IterAdr =   ((self->ptrCbs)[self->uint8IterCb]).uint32StartSector * (uint32_t) SFCB_FLASH_TOPO_SECTOR_SIZE
@@ -359,6 +380,8 @@ void sfcb_worker (t_sfcb *self)
                     memset(self->uint8PtrSpi, 0, self->uint16SpiLen);
                     self->uint8PtrSpi[0] = SFCB_FLASH_IST_RD_DATA;
                     sfcb_adr32_uint8(self->uint32IterAdr, self->uint8PtrSpi+1, SFCB_FLASH_TOPO_ADR_BYTE);   // +1 first byte is instruction
+                    /* debug message */
+                    sfcb_printf("  INFO:%s:MKCB:STG2:FLASH: adr=0x%x, len=%i\n", __FUNCTION__, self->uint32IterAdr, (uint32_t) sizeof(spi_flash_cb_elem_head));
                     /* prepare iterator for next */
                     if ( self->uint16Iter < ((self->ptrCbs)[self->uint8IterCb]).uint16NumEntriesMax ) {
                         /* next element in current queue */
@@ -402,9 +425,7 @@ void sfcb_worker (t_sfcb *self)
                             self->stage = SFCB_STG03;
                         }
                     }
-                    return; // DONE or SPI transfer is required
-
-
+                    return; // DONE or SPI transfer is require
                 /* Assemble Command for Sector ERASE */
                 case SFCB_STG03:
                     sfcb_printf( "  INFO:%s:MKCB:STG3: Assemble Command for Sector ERASE\n", __FUNCTION__);
@@ -805,7 +826,7 @@ int sfcb_mkcb (t_sfcb *self)
     }
     /* Setup new Job */
     self->cmd = SFCB_CMD_MKCB;
-    self->uint16Iter = 0;
+    self->uint16Iter = 0;       // start with first element on lowest
     self->stage = SFCB_STG00;
     self->error = SFCB_E_NOERO;
     self->uint8Busy = 1;
@@ -953,6 +974,11 @@ int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
     if ( (len + sizeof(spi_flash_cb_elem_head)) > ((self->ptrCbs[cbID]).uint16NumPagesPerElem * SFCB_FLASH_TOPO_PAGE_SIZE) ) {
         len = (uint16_t) (((self->ptrCbs[cbID]).uint16NumPagesPerElem * (uint16_t) SFCB_FLASH_TOPO_PAGE_SIZE) - (uint16_t) sizeof(spi_flash_cb_elem_head));
     }
+    /* Debug message */
+    sfcb_printf (  "  INFO:%s: read from flash adr=%x\n",
+                   __FUNCTION__,
+                   ((self->ptrCbs)[cbID]).uint32StartPageIdMax
+                );
     /* prepare job */
     self->ptrCbElemPl = data;
     self->uint16CbElemPlSize = len; // read number of requested bytes, but limited to last  element size
