@@ -371,7 +371,7 @@ void sfcb_worker (t_sfcb *self)
                      *       therefore going for the next head and subtract the head will lead to the flash address
                      *       of the footer in the current queue element
                      */
-                    self->uint32IterAdr = sfcb_flash_adr_head(self, (self->uint16Iter) + (uint16_t) 1) - (uint32_t) sizeof(spi_flash_cb_elem_head);
+                    self->uint32IterAdr = sfcb_flash_adr_head(self, (uint16_t) ((self->uint16Iter) + 1)) - (uint32_t) sizeof(spi_flash_cb_elem_head);
                     sfcb_spi_get_head(self);
                     /* go on with footer evaluation and requesting next header */
                     self->stage = SFCB_STG02;
@@ -399,7 +399,7 @@ void sfcb_worker (t_sfcb *self)
                         ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageIdMax = self->uint32LastElemAdr; // needed by sfcb_get_last
                     }
                     /* request next header of circular buffer */
-                    self->uint32IterAdr = sfcb_flash_adr_head(self, (self->uint16Iter) + (uint16_t) 1);
+                    self->uint32IterAdr = sfcb_flash_adr_head(self, (uint16_t) ((self->uint16Iter) + 1));
                     sfcb_spi_get_head(self);    // assemble SPI packet for request next head
                     /* debug message */
                     sfcb_printf("  INFO:%s:MKCB:STG2:FLASH: adr=0x%x, len=%i\n", __FUNCTION__, self->uint32IterAdr, (uint32_t) sizeof(spi_flash_cb_elem_head));
