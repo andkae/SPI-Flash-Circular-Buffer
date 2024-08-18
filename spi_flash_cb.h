@@ -73,7 +73,7 @@ typedef enum
  *
  *  @brief  stage of command
  *
- *  Every command is divided into stages of exectuion.
+ *  Every command is divided into stages of execution.
  *  The execution starts always on stage 0. If an hardware
  *  interaction is required then the stage ends and the
  *  data packet will sent to hardware. This makes the
@@ -105,9 +105,9 @@ typedef enum
  */
 typedef enum
 {
-    SFCB_E_NOERO,   /**<  No Error occured */
+    SFCB_E_NOERO,   /**<  No Error occurred */
     SFCB_E_BUFSIZE, /**<  Buffer too small for operation */
-    SFCB_E_UNKBEH   /**<  Unknown behaviour observed */
+    SFCB_E_UNKBEH   /**<  Unknown behavior observed */
 } t_sfcb_error;
 
 
@@ -136,7 +136,7 @@ typedef struct spi_flash_cb_elem_head
  *
  *  @brief  queue management
  *
- *  Cicrcular buffer queue managament entry.
+ *  Circular buffer queue management entry.
  *  This structure is used in an array and for every
  *  circular buffer queue is such an entry mandatory
  *
@@ -145,21 +145,22 @@ typedef struct spi_flash_cb_elem_head
  */
 typedef struct t_sfcb_cb
 {
-    uint8_t     uint8Used;                  /**< Managment slot in #t_sfcb_cb table is used, try next index */
+    uint8_t     uint8Used;                  /**< Management slot in #t_sfcb_cb table is used, try next index */
     uint8_t     uint8MgmtValid;             /**< Entry in management table like #uint32MagicNum, #uint32IdNumMax and ... is valid/invalid. In case of invalid run #sfcb_worker to update the management info in this entry */
     uint32_t    uint32MagicNum;             /**< Magic Number for marking valid block */
-    uint32_t    uint32IdNumMax;             /**< Contents highest elment number in logical circular buffer. Circular buffer elements are ascending numbered starting at zero */
+    uint32_t    uint32IdNumMax;             /**< Contents highest element number in logical circular buffer. Circular buffer elements are ascending numbered starting at zero */
     uint32_t    uint32IdNumMin;             /**< lowest element number in circular buffer */
     uint32_t    uint32StartSector;          /**< Start Sector of the Circular Buffer */
     uint32_t    uint32StopSector;           /**< Stop Sector. At least two sectors are required, otherwise will sector erase delete complete buffer */
     uint32_t    uint32StartPageWrite;       /**< Start Page number of next entry */
     uint32_t    uint32StartPageIdMin;       /**< Start page of Circular buffer entry with lowest number, used for sector erase */
     uint32_t    uint32StartPageIdMax;       /**< Start page of Circular buffer entry with highest number, used for #sfcb_get_last */
+    uint32_t    uint32ElemIdLastCpl;        /**< Element Id of last complete written element, used for #sfcb_get_last */
     uint16_t    uint16NumPagesPerElem;      /**< Number of pages per element */
     uint16_t    uint16NumEntriesMax;        /**< Maximal Number of entries in circular buffer caused by partition table */
     uint16_t    uint16NumEntries;           /**< Number of entries in circular buffer */
     uint16_t    uint16PlFlashOfs;           /**< Stores offset in flash payload, enables splitted append operations */
-    uint16_t    uint16PlSize;               /**< Size of Payload stored in the circular bufer, needed for footer write */
+    uint16_t    uint16PlSize;               /**< Size of Payload stored in the circular buffer, needed for footer write */
 } t_sfcb_cb;
 
 
@@ -176,20 +177,24 @@ typedef struct t_sfcb_cb
  */
 typedef struct t_sfcb
 {
-    uint8_t         uint8NumCbs;            /**< number of circular buffers */
-    t_sfcb_cb*      ptrCbs;                 /**< List with flash circular buffer management info, #t_sfcb_cb */
-    uint8_t*        uint8PtrSpi;            /**< SPI/CB layer interaction buffer */
-    uint16_t        uint16SpiLen;           /**< used buffer length */
-    uint16_t        uint16SpiMax;           /**< maximum spi buffer length */
-    uint8_t         uint8Busy;              /**< Performing splitted interaction of circular buffers */
-    t_sfcb_cmd      cmd;                    /**< Command to be executed, #t_sfcb_cmd */
-    uint8_t         uint8IterCb;            /**< Iterator for splitted interaction, iterator over Circular buffers */
-    uint16_t        uint16Iter;             /**< General Iterator for splitted interaction, used to iterate over bytes in circular buffer element, or to iterate over circular buffer elements itself */
-    uint32_t        uint32IterAdr;          /**< Flash address iterator. Contents full byte address in flash. F. e. captures last header page, next page write */
-    t_sfcb_stage    stage;                  /**< Execution stage, from last interaction, #t_sfcb_stage */
-    t_sfcb_error    error;                  /**< Error code if somehting strange happend, #t_sfcb_error */
-    void*           ptrCbElemPl;            /**< Pointer to Payload data of CB Element */
-    uint16_t        uint16CbElemPlSize;     /**< Size of payload data in bytes */
+    uint8_t                 uint8NumCbs;        /**< number of circular buffers */
+    t_sfcb_cb*              ptrCbs;             /**< List with flash circular buffer management info, #t_sfcb_cb */
+    uint8_t*                uint8PtrSpi;        /**< SPI/CB layer interaction buffer */
+    uint16_t                uint16SpiLen;       /**< used buffer length */
+    uint16_t                uint16SpiMax;       /**< maximum SPI buffer length */
+    uint8_t                 uint8Busy;          /**< Performing splitted interaction of circular buffers */
+    t_sfcb_cmd              cmd;                /**< Command to be executed, #t_sfcb_cmd */
+    uint8_t                 uint8IterCb;        /**< Iterator for splitted interaction, iterator over Circular buffers */
+    uint16_t                uint16Iter;         /**< General Iterator for splitted interaction, used to iterate over bytes in circular buffer element, or to iterate over circular buffer elements itself */
+    uint32_t                uint32IterAdr;      /**< Flash address iterator. Contents full byte address in flash. F. e. captures last header page, next page write */
+    t_sfcb_stage            stage;              /**< Execution stage, from last interaction, #t_sfcb_stage */
+    t_sfcb_error            error;              /**< Error code if something strange happened, #t_sfcb_error */
+    void*                   ptrCbElemPl;        /**< Pointer to Payload data of CB Element */
+    uint16_t                uint16CbElemPlSize; /**< Size of payload data in bytes */
+    spi_flash_cb_elem_head  head;               /**< Circular buffer queue elements inter transaction buffer */
+    spi_flash_cb_elem_head  foot;               /**< Circular buffer queue elements inter transaction buffer, #sfcb_get_last element complete write check */
+    uint32_t                uint32LastElemAdr;  /**< Temporary variable to store start address of successful written element */
+    uint32_t                uint32LastElemNum;  /**< Temporary variable to store queue element id of last successful written element */
 } t_sfcb;
 
 
@@ -200,10 +205,10 @@ typedef struct t_sfcb
  *  initializes flash circular buffer
  *
  *  @param[in,out]  self                handle, #t_sfcb
- *  @param[in,out]  *cb                 pointer to allocated memory for circulat buffer list, see #t_sfcb_cb
+ *  @param[in,out]  *cb                 pointer to allocated memory for circular buffer list, see #t_sfcb_cb
  *  @param[in]      cbLen               number of maximum allowed circular buffers
- *  @param[in,out]  *spi                pointer to uint8_t spi interaction buffer, buffer betwween spi core and flash driver
- *  @param[in]      spiLen              maimum number of elements in buffer => size in byte
+ *  @param[in,out]  *spi                pointer to uint8_t SPI interaction buffer, buffer between SPI core and flash driver
+ *  @param[in]      spiLen              maximum number of elements in buffer => size in byte
  *  @return         int                 state
  *  @retval         0                   OKAY
  *  @retval         1                   Invalid Flash Type
@@ -245,10 +250,10 @@ uint32_t sfcb_flash_size (void);
 /**
  *  @brief new_cb
  *
- *  creates new circular buffer entry in flash parition table
+ *  creates new circular buffer entry in flash partition table
  *
  *  @param[in,out]  self                handle, #t_sfcb
- *  @param[in]      magicNum            Magic Number for marking enties valid, should differ between different Circular buffer entries
+ *  @param[in]      magicNum            Magic Number for marking entries valid, should differ between different Circular buffer entries
  *  @param[in]      elemSizeByte        Size of one element in the circular buffer in byte
  *  @param[in]      numElems            minimal number of elements in the circular buffer, through need of sector erase and not deleting all data can be this number higher then requested
  *  @param[in,out]  *cbID               Circular buffer number
@@ -319,7 +324,7 @@ int sfcb_mkcb (t_sfcb *self);
  *  in case of prematurely finish circular buffer element run #sfcb_add_done
  *
  *  @param[in,out]  self                handle, #t_sfcb
- *  @param[in]      cbID                Logical Number of Cicular Buffer queue
+ *  @param[in]      cbID                Logical Number of Circular Buffer queue
  *  @param[in]      *data               Pointer to data array which should add
  *  @param[in]      len                 size of *data in bytes
  *  @return         int                 state
@@ -342,12 +347,12 @@ int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len);
  *  and the nominal payload size isn't reached
  *
  *  @param[in,out]  self                handle, #t_sfcb
- *  @param[in]      cbID                Logical Number of Cicular Buffer queue
+ *  @param[in]      cbID                Logical Number of Circular Buffer queue
  *  @return         int                 state
  *  @retval         #SFCB_OK            Request accepted.
  *  @retval         #SFCB_E_WKR_BSY     Worker is busy, wait for processing last job.
  *  @retval         #SFCB_E_NO_CB_Q     Circular buffer queue not active or present.
- *  @retval         #SFCB_E_CB_Q_MTY    Cirular buffer queue has no valid entries.    
+ *  @retval         #SFCB_E_CB_Q_MTY    Circular buffer queue has no valid entries.
  *  @since          2023-12-26
  *  @author         Andreas Kaeberlein
  */
@@ -362,7 +367,7 @@ int sfcb_add_done (t_sfcb *self, uint8_t cbID);
  *  these bytes are fixed up to an erase
  *
  *  @param[in,out]  self                handle, #t_sfcb
- *  @param[in]      cbID                Logical Number of Cicular Buffer queue
+ *  @param[in]      cbID                Logical Number of Circular Buffer queue
  *  @return         uint16_t            number of bytes written to flash from start of payload
  *  @since          2023-10-03
  *  @author         Andreas Kaeberlein
@@ -396,19 +401,20 @@ int sfcb_flash_read (t_sfcb *self, uint32_t adr, void *data, uint16_t len);
  *  get last written element from circular buffer queue
  *
  *  @param[in,out]  self                handle, #t_sfcb
- *  @param[in]      cbID                Logical Number of Cicular Buffer queue
+ *  @param[in]      cbID                Logical Number of Circular Buffer queue
  *  @param[in,out]  *data               pointer to data array with read data
  *  @param[in]      len                 size of *data in bytes, limited the queue element size
+ *  @param[in,out]  *elemID             queue element id of read queue element, helps to detect incomplete writes in a chain of elements
  *  @return         int                 state
  *  @retval         #SFCB_OK            Request accepted
  *  @retval         #SFCB_E_WKR_BSY     Worker is busy, wait for processing last job
  *  @retval         #SFCB_E_NO_CB_Q     Circular buffer queue not present
  *  @retval         #SFCB_E_WKR_REQ     Circular Buffer is not prepared for reading element, run #sfcb_worker
- *  @retval         #SFCB_E_CB_Q_MTY    Cirular buffer queue has no valid entries
+ *  @retval         #SFCB_E_CB_Q_MTY    Circular buffer queue has no valid entries
  *  @since          2023-08-15
  *  @author         Andreas Kaeberlein
  */
-int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t len);
+int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t len, uint32_t *elemID);
 
 
 
@@ -418,7 +424,7 @@ int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t len);
  *  get maximum id in selected circular buffer queue
  *
  *  @param[in,out]  self                handle, #t_sfcb
- *  @param[in]      cbID                Logical Number of Cicular Buffer queue
+ *  @param[in]      cbID                Logical Number of Circular Buffer queue
  *  @return         uint32_t            highest id number of selected circular buffer queue
  *  @since          2023-01-01
  *  @author         Andreas Kaeberlein
@@ -430,12 +436,12 @@ uint32_t sfcb_idmax (t_sfcb *self, uint8_t cbID);
 /**
  *  @brief check error
  *
- *  check if in last transaction an  error occured
+ *  check if in last transaction an  error occurred
  *
  *  @param[in,out]  self                handle, #t_sfcb
  *  @return         int                 highest id number of selected circular buffer queue
  *  @retval         0                   No error
- *  @retval         -1                  error occured, data may corrupted
+ *  @retval         -1                  error occurred, data may corrupted
  *  @since          2023-10-13
  *  @author         Andreas Kaeberlein
  */
