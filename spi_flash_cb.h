@@ -155,6 +155,7 @@ typedef struct t_sfcb_cb
     uint32_t    uint32StartPageWrite;       /**< Start Page number of next entry */
     uint32_t    uint32StartPageIdMin;       /**< Start page of Circular buffer entry with lowest number, used for sector erase */
     uint32_t    uint32StartPageIdMax;       /**< Start page of Circular buffer entry with highest number, used for #sfcb_get_last */
+    uint32_t    uint32ElemIdLastCpl;        /**< Element Id of last complete written element, used for #sfcb_get_last */
     uint16_t    uint16NumPagesPerElem;      /**< Number of pages per element */
     uint16_t    uint16NumEntriesMax;        /**< Maximal Number of entries in circular buffer caused by partition table */
     uint16_t    uint16NumEntries;           /**< Number of entries in circular buffer */
@@ -192,7 +193,8 @@ typedef struct t_sfcb
     uint16_t                uint16CbElemPlSize; /**< Size of payload data in bytes */
     spi_flash_cb_elem_head  head;               /**< Circular buffer queue elements inter transaction buffer */
     spi_flash_cb_elem_head  foot;               /**< Circular buffer queue elements inter transaction buffer, #sfcb_get_last element complete write check */
-    uint32_t                uint32LastElemAdr; 	/**< Temporary variable to store start address of successfull written element */
+    uint32_t                uint32LastElemAdr;  /**< Temporary variable to store start address of successful written element */
+    uint32_t                uint32LastElemNum;  /**< Temporary variable to store queue element id of last successful written element */
 } t_sfcb;
 
 
@@ -402,6 +404,7 @@ int sfcb_flash_read (t_sfcb *self, uint32_t adr, void *data, uint16_t len);
  *  @param[in]      cbID                Logical Number of Circular Buffer queue
  *  @param[in,out]  *data               pointer to data array with read data
  *  @param[in]      len                 size of *data in bytes, limited the queue element size
+ *  @param[in,out]  *elemID             queue element id of read queue element, helps to detect incomplete writes in a chain of elements
  *  @return         int                 state
  *  @retval         #SFCB_OK            Request accepted
  *  @retval         #SFCB_E_WKR_BSY     Worker is busy, wait for processing last job
@@ -411,7 +414,7 @@ int sfcb_flash_read (t_sfcb *self, uint32_t adr, void *data, uint16_t len);
  *  @since          2023-08-15
  *  @author         Andreas Kaeberlein
  */
-int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t len);
+int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t len, uint32_t *elemID);
 
 
 

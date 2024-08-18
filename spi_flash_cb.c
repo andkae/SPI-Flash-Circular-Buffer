@@ -328,7 +328,8 @@ void sfcb_worker (t_sfcb *self)
                         if ( (self->head).uint32IdNum > ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax ) {
                             /* save new highest number in circular buffer */
                             ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMax = (self->head).uint32IdNum;
-                            self->uint32LastElemAdr = self->uint32IterAdr;  // store temporary, footer check pending, needed by sfcb_get_last
+                            self->uint32LastElemAdr = self->uint32IterAdr;      // store temporary, footer check pending, needed by sfcb_get_last
+                            self->uint32LastElemNum = (self->head).uint32IdNum; // store temporary
                         }
                         /* get lowest number of circular buffer, needed for erase sector, and start get function */
                         if ( (self->head).uint32IdNum < ((self->ptrCbs)[self->uint8IterCb]).uint32IdNumMin ) {
@@ -397,6 +398,7 @@ void sfcb_worker (t_sfcb *self)
                                         __FUNCTION__, self->uint32LastElemAdr
                                     );
                         ((self->ptrCbs)[self->uint8IterCb]).uint32StartPageIdMax = self->uint32LastElemAdr; // needed by sfcb_get_last
+                        ((self->ptrCbs)[self->uint8IterCb]).uint32ElemIdLastCpl  = self->uint32LastElemNum; // needed by sfcb_get_last
                     }
                     /* request next header of circular buffer */
                     self->uint32IterAdr = sfcb_flash_adr_head(self, (uint16_t) ((self->uint16Iter) + 1));
@@ -969,8 +971,10 @@ uint16_t sfcb_get_pl_wrcnt (t_sfcb *self, uint8_t cbID)
  *  sfcb_get_last
  *    get last written element from circular buffer
  */
-int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
+int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t len, uint32_t *elemID)
 {
+    /* default */
+    *elemID = 0;
     /* no jobs pending */
     if ( 0 != self->uint8Busy ) {
         sfcb_printf("  ERROR:%s: Worker is busy\n", __FUNCTION__);
@@ -1002,7 +1006,7 @@ int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
                 );
     /* prepare job */
     self->ptrCbElemPl = data;
-    self->uint16CbElemPlSize = len; // read number of requested bytes, but limited to last  element size
+    self->uint16CbElemPlSize = len; // read number of requested bytes, but limited to last element size
     self->uint32IterAdr = (uint32_t) (((self->ptrCbs)[cbID]).uint32StartPageIdMax + sizeof(spi_flash_cb_elem_head));    // Start address of last written element, newest circular buffer entry, header is not part of payload
     self->uint16Iter = 0;   // used as ptrCbElemPl written pointer
     /* Setup new Job */
@@ -1010,6 +1014,8 @@ int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t len)
     self->cmd = SFCB_CMD_GET;   // read last element in queue from flash
     self->stage = SFCB_STG00;
     self->error = SFCB_E_NOERO;
+    /* return element ID of read queue element */
+    *elemID = (self->ptrCbs[cbID]).uint32ElemIdLastCpl;
     /* fine */
     return SFCB_OK;
 }
