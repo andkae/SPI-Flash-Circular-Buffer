@@ -31,11 +31,11 @@ and SPI core is realized as shared memory.
 ## [API](./spi_flash_cb.h)
 
 ### Init
+Initializes _SFCB_ common handle and assigns memory.
+
 ```c
 int sfcb_init (t_sfcb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen);
 ```
-
-Initializes _SFCB_ common handle and assigns memory.
 
 #### Arguments:
 | Arg    | Description                       |
@@ -51,38 +51,12 @@ Initializes _SFCB_ common handle and assigns memory.
 * Failure: *!= 0*
 
 
-### Worker
-```c
-void sfcb_worker (t_sfcb *self);
-```
-
-Services circular buffer layer request as well SPI packet processing.
-This function should called in a time based matter.
-The SPI data packet transfer should use an ISR based dataflow.
-
-#### Arguments:
-| Arg  | Description            |
-| ---- | ---------------------- |
-| self | _SFCB_ storage element |
-
-
-### Flash Size
-```c
-uint32_t sfcb_flash_size (void);
-```
-
-Get _SFCB_ compiled flash type total size.
-
-#### Return:
-Size in bytes.
-
-
 ### New queue
+Creates a new logical independent circular buffer queue in the SPI Flash.
+
 ```c
 int sfcb_new_cb (t_sfcb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_t numElems, uint8_t *cbID);
 ```
-
-Creates a new logical independent circular buffer queue in the SPI Flash.
 
 #### Arguments:
 | Arg          | Description                                                                    |
@@ -101,11 +75,11 @@ Creates a new logical independent circular buffer queue in the SPI Flash.
 
 
 ### Busy
+Checks if _SFCB_ is processing another request.
+
 ```c
 int sfcb_busy (t_sfcb *self);
 ```
-
-Checks if _SFCB_ is processing another request.
 
 #### Arguments:
 | Arg  | Description            |
@@ -117,6 +91,75 @@ Checks if _SFCB_ is processing another request.
 | ----- | ----------- |
 | 0     | Free        |
 | 1     | Busy        |
+
+
+### Build
+
+Acquires all queue information from SPI flash. Needed after calling _sfcb_add_ to update all management information.
+
+```c
+int sfcb_mkcb (t_sfcb *self);
+```
+
+#### Arguments:
+| Arg  | Description            |
+| ---- | ---------------------- |
+| self | _SFCB_ storage element |
+
+#### Return:
+| Value | Description                         |
+| ----- | ----------------------------------- |
+| 0     | Okay                                |
+| 1     | _SFCB_ busy                         |
+| 2     | no active queues, use _sfcb_new_cb_ |
+
+
+
+
+
+### Worker
+Services circular buffer layer request as well SPI packet processing.
+This function should called in a time based matter.
+The SPI data packet transfer should use an ISR based dataflow.
+
+```c
+void sfcb_worker (t_sfcb *self);
+```
+
+#### Arguments:
+| Arg  | Description            |
+| ---- | ---------------------- |
+| self | _SFCB_ storage element |
+
+
+### SPI packet size
+By _sfcb_worker_ created SPI packet size in bytes.
+
+```c
+uint16_t sfcb_spi_len (t_sfcb *self);
+```
+
+#### Arguments:
+| Arg  | Description            |
+| ---- | ---------------------- |
+| self | _SFCB_ storage element |
+
+#### Return:
+Byte Count of SPI packet.
+
+
+
+### Flash Size
+Get _SFCB_ compiled flash type total size.
+
+```c
+uint32_t sfcb_flash_size (void);
+```
+
+#### Return:
+Size in bytes.
+
+
 
 
 
