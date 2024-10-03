@@ -160,7 +160,7 @@ int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len);
 | len   | number of bytes in _*data_        |
 
 #### Return:
-[Exit codes](#return--exit-codes)
+[Exit codes](#return-exit-codes)
 
 
 ### Worker
