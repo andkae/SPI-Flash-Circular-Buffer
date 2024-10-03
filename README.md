@@ -8,8 +8,8 @@ and SPI core is realized as shared memory.
 
 ## Features
 * Arbitrary SPI [Flash](/sfcb_flash_types.h) support
-* Arbitary number of circular buffers in one SPI flash
-* Interaction between circular buffer and SPI interface is ealized as shared memory
+* Arbitrary number of circular buffers in one SPI flash
+* Interaction between circular buffer and SPI interface is realized as shared memory
 
 
 ## Releases
@@ -18,14 +18,35 @@ and SPI core is realized as shared memory.
 | latest                                                 |            | <a id="raw-url" href="https://github.com/andkae/SPI-Flash-Circular-Buffer/archive/refs/heads/main.zip">latest.zip</a>  |                                                                                                                                                    |
 
 
-## Build
-```bash
+## How-to
 
+### Clone
+```bash
+git clone --recursive https://github.com/andkae/SPI-Flash-Circular-Buffer.git
 ```
 
+### Build
+The repository build with [unit test](/test/sfcb_test.c) is realized via [Makefile](/Makefile):
+```bash
+$ make
+gcc -c -O -Wall -Wextra -Wconversion -I . -I ../ -DW25Q16JV ./test/sfcb_test.c -o ./test/sfcb_test.o
+gcc -c -O -Wall -Wextra -Wconversion -I . -I ../ -DW25Q16JV -DSFCB_PRINTF_EN ./spi_flash_cb.c -o ./test/sfcb.o
+gcc -c -O -Wall -Wextra -Wconversion -I . -I ../ -DW25Q16JV  ./test/spi_flash_model/spi_flash_model.c -o ./test/spi_flash_model.o
+gcc ./test/sfcb_test.o ./test/sfcb.o ./test/spi_flash_model.o -Wall -Wextra -I. -lm -o ./test/sfcb_test
+```
 
-## Example
+The library part itself can be built with:
+```bash
+gcc -c -O -Wall -Wextra -Wconversion -I . -DW25Q16JV -Werror ./spi_flash_cb.c -o ./test/sfcb.o
+```
 
+The flash memory [_W25Q16JV_](/sfcb_flash_types.h) was selected via compile switch ```-D```.
+
+
+### Example
+
+
+### Test
 
 
 ## [API](./spi_flash_cb.h)
