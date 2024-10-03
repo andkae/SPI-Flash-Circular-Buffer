@@ -6,16 +6,19 @@ C Library to transform a physical SPI Flash into a logical circular buffer. The 
 and SPI core is realized as shared memory.
 
 
+
 ## Features
 * Arbitrary SPI [Flash](/sfcb_flash_types.h) support
-* Arbitrary number of circular buffers in one SPI flash
+* Arbitrary number of circular buffer queues (_cbID_) in one SPI flash
 * Interaction between circular buffer and SPI interface is realized as shared memory
+
 
 
 ## Releases
 | Version                                                | Date       | Source                                                                                                                 | Change log                                                                                                                                         |
 | ------------------------------------------------------ | ---------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | latest                                                 |            | <a id="raw-url" href="https://github.com/andkae/SPI-Flash-Circular-Buffer/archive/refs/heads/main.zip">latest.zip</a>  |                                                                                                                                                    |
+
 
 
 ## How-to
@@ -26,7 +29,7 @@ git clone --recursive https://github.com/andkae/SPI-Flash-Circular-Buffer.git
 ```
 
 ### Build
-The repository build with [unit test](/test/sfcb_test.c) is realized via [Makefile](/Makefile):
+The [Makefile](/Makefile) build the repository with [unit test](/test/sfcb_test.c):
 ```bash
 $ make
 gcc -c -O -Wall -Wextra -Wconversion -I . -I ../ -DW25Q16JV ./test/sfcb_test.c -o ./test/sfcb_test.o
@@ -43,10 +46,17 @@ gcc -c -O -Wall -Wextra -Wconversion -I . -DW25Q16JV -Werror ./spi_flash_cb.c -o
 The flash memory [_W25Q16JV_](/sfcb_flash_types.h) was selected via compile switch ```-D```.
 
 
+
 ### Example
 
 
+
 ### Test
+To run the unit test call:
+```bash
+$ ./test/sfcb_test
+```
+
 
 
 ## [API](./spi_flash_cb.h)
@@ -115,7 +125,6 @@ int sfcb_busy (t_sfcb *self);
 
 
 ### Build
-
 Acquires all queue information from SPI flash. Needed after calling _sfcb_add_ to update all management information.
 
 ```c
@@ -133,6 +142,24 @@ int sfcb_mkcb (t_sfcb *self);
 | 0     | Okay                                |
 | 1     | _SFCB_ busy                         |
 | 2     | no active queues, use _sfcb_new_cb_ |
+
+
+### Add (Append)
+
+Append bytes to the current selected circular buffer queue element.
+```c
+int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len);
+```
+
+#### Arguments:
+| Arg   | Description                       |
+| ----- | --------------------------------- |
+| self  | _SFCB_ storage element            |
+| cbID  | circular buffer queue to interact |
+| *data | pointer to write data             |
+| len   | number of bytes in _*data_        |
+ 
+#### Return:
 
 
 
@@ -181,6 +208,10 @@ uint32_t sfcb_flash_size (void);
 Size in bytes.
 
 
+### Return: Exit codes
+| Value                          | Description            |
+| ------------------------------ | ---------------------- |
+| [SFCB_OK](/spi_flash_cb.h#L30) | Request accepted       |
 
 
 
