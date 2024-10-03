@@ -158,7 +158,7 @@ int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len);
 | cbID  | circular buffer queue to interact |
 | *data | pointer to write data             |
 | len   | number of bytes in _*data_        |
- 
+
 #### Return:
 
 
@@ -209,10 +209,16 @@ Size in bytes.
 
 
 ### Return: Exit codes
-| Value                          | Description            |
-| ------------------------------ | ---------------------- |
-| [SFCB_OK](/spi_flash_cb.h#L30) | Request accepted       |
-
+| Value                                    | Description                                                                   |
+| ---------------------------------------- | ----------------------------------------------------------------------------- |
+| [SFCB_OK](/spi_flash_cb.h#L30)           | Request accepted                                                              |
+| [SFCB_E_NO_FLASH](/spi_flash_cb.h#L31)   | no flash type selected, use ```-D```                                          |
+| [SFCB_E_MEM](/spi_flash_cb.h#L32)        | not enough memory assigned in ```sfcb_init```                                 |
+| [SFCB_E_FLASH_FULL](/spi_flash_cb.h#L33) | Flash capacity exceeded                                                       |
+| [SFCB_E_WKR_BSY](/spi_flash_cb.h#L34)    | ```sfcb_worker``` is busy, wait                                               |
+| [SFCB_E_NO_CB_Q](/spi_flash_cb.h#L35)    | circular buffer queue ```cbID``` not existent                                 |
+| [SFCB_E_WKR_REQ](/spi_flash_cb.h#L36)    | circular buffer management data not prepared for request, run ```sfcb_mkcb``` |
+| [SFCB_E_CB_Q_MTY](/spi_flash_cb.h#L37)   | no valid entries in queue                                                     |
 
 
 
