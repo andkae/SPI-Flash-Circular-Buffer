@@ -29,7 +29,7 @@ git clone --recursive https://github.com/andkae/SPI-Flash-Circular-Buffer.git
 ```
 
 ### Build
-The [Makefile](/Makefile) build the repository with [unit test](/test/sfcb_test.c):
+The [Makefile](/Makefile) builds the repository with [unit test](/test/sfcb_test.c):
 ```bash
 $ make
 gcc -c -O -Wall -Wextra -Wconversion -I . -I ../ -DW25Q16JV ./test/sfcb_test.c -o ./test/sfcb_test.o
@@ -160,9 +160,7 @@ int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len);
 | len   | number of bytes in _*data_        |
 
 #### Return:
-
-
-
+[Exit codes](#return--exit-codes)
 
 
 ### Worker
