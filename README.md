@@ -2,23 +2,21 @@
 
 
 # SPI Flash Circular Buffer
-C Library to transform a physical SPI Flash into a logical circular buffer. The interface between _[SFCB](https://github.com/andkae/SPI-Flash-Circular-Buffer)_
-and SPI core is realized as shared memory.
-
+C Library to transform a physical SPI Flash into a arbitrary number  of logical circular buffers.
+The interface between _[SFCB](https://github.com/andkae/SPI-Flash-Circular-Buffer)_ and SPI core is realized as shared memory.
 
 
 ## Features
-* Arbitrary SPI [Flash](/sfcb_flash_types.h) support
+* Arbitrary SPI [Flash](/sfcb_flash_types.h) support, selectable via ```-D``` at compile time
 * Arbitrary number of circular buffer queues (_cbID_) in one SPI flash
 * Interaction between circular buffer and SPI interface is realized as shared memory
-
+* Requires no files system like _LittleFS_, _SPIFFS_
 
 
 ## Releases
 | Version                                                | Date       | Source                                                                                                                 | Change log                                                                                                                                         |
 | ------------------------------------------------------ | ---------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | latest                                                 |            | <a id="raw-url" href="https://github.com/andkae/SPI-Flash-Circular-Buffer/archive/refs/heads/main.zip">latest.zip</a>  |                                                                                                                                                    |
-
 
 
 ## How-to
@@ -145,7 +143,6 @@ int sfcb_mkcb (t_sfcb *self);
 
 
 ### Add (Append)
-
 Append bytes to the current selected circular buffer queue element.
 ```c
 int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len);
@@ -158,6 +155,63 @@ int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len);
 | cbID  | circular buffer queue to interact |
 | *data | pointer to write data             |
 | len   | number of bytes in _*data_        |
+
+#### Return:
+[Exit codes](#return-exit-codes)
+
+
+### Add Done
+Force writing the _[Footer](#memory-organization)_ if not all available bytes in the circular buffer queue
+element are occupied by [Add](#add-append). The _Footer_ is used to detect an complete writing of an element.
+The general recommendation is to call ```sfcb_add_done``` every time when you completed the queue element writing.
+
+```c
+int sfcb_add_done (t_sfcb *self, uint8_t cbID);
+```
+
+#### Arguments:
+| Arg   | Description                       |
+| ----- | --------------------------------- |
+| self  | _SFCB_ storage element            |
+| cbID  | circular buffer queue to interact |
+
+#### Return:
+[Exit codes](#return-exit-codes)
+
+
+### Get Payload Offset
+Acquire the current number of written bytes to the queues element. Main
+purpose is to enable an multistage writing of an data object to the
+circular buffer.
+
+```c
+uint16_t sfcb_get_pl_wrcnt (t_sfcb *self, uint8_t cbID);
+```
+
+#### Arguments:
+| Arg   | Description                       |
+| ----- | --------------------------------- |
+| self  | _SFCB_ storage element            |
+| cbID  | circular buffer queue to interact |
+
+#### Return:
+Write byte count of queue element.
+
+
+### Get Last
+Read last written queue element back.
+```c
+int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t len, uint32_t *elemID);
+```
+
+#### Arguments:
+| Arg     | Description                       |
+| ------- | --------------------------------- |
+| self    | _SFCB_ storage element            |
+| cbID    | circular buffer queue to interact |
+| *data   | pointer to read data              |
+| len     | number of bytes in _*data_        |
+| *elemID | queue element number              |
 
 #### Return:
 [Exit codes](#return-exit-codes)
@@ -209,7 +263,7 @@ Size in bytes.
 ### Return: Exit codes
 | Value                                    | Description                                                                   |
 | ---------------------------------------- | ----------------------------------------------------------------------------- |
-| [SFCB_OK](/spi_flash_cb.h#L30)           | Request accepted                                                              |
+| [SFCB_OK](/spi_flash_cb.h#L30)           | Accepted                                                                      |
 | [SFCB_E_NO_FLASH](/spi_flash_cb.h#L31)   | no flash type selected, use ```-D```                                          |
 | [SFCB_E_MEM](/spi_flash_cb.h#L32)        | not enough memory assigned in ```sfcb_init```                                 |
 | [SFCB_E_FLASH_FULL](/spi_flash_cb.h#L33) | Flash capacity exceeded                                                       |
