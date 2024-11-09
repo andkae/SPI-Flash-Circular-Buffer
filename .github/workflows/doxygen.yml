@@ -21,7 +21,6 @@ on: push
 jobs:
   doxygen:
     runs-on: ubuntu-latest
-    container: dolphinics/doxygen:latest
     steps:
       - name: Check out repository code
         uses: actions/checkout@v3
