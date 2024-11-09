@@ -31,7 +31,7 @@ jobs:
         uses: mattnotmitt/doxygen-action@v1.9.5
         with:
           doxyfile-path: 'doxygen'
-          working-directory: './doxygen/out'
+          working-directory: 'doxygen'
           enable-latex: true
       - name: Run Latex
         run: |
