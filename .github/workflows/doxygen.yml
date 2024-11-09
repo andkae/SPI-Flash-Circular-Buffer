@@ -34,9 +34,6 @@ jobs:
           doxyfile-path: ./doxygen/Doxyfile
           working-directory: './doxygen/out'
           enable-latex: true
-        run: |
-          doxygen --version
-          doxygen ./doxygen/Doxyfile
       - name: Run Latex
         run: |
           pdflatex --version
