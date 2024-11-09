@@ -28,10 +28,10 @@ jobs:
         run: |
           mkdir -p ./doxygen/out
       - name: Run Doxygen
-        uses: mattnotmitt/doxygen-action@v1.9.5
+        uses: mattnotmitt/doxygen-action@v1.9.5     # https://github.com/mattnotmitt/doxygen-action
         with:
-          doxyfile-path: 'doxygen'
-          working-directory: 'doxygen'
+          working-directory: 'doxygen'  # Path of the working directory to change to before running doxygen
+          doxyfile-path: './Doxyfile'   # Path of the Doxyfile relative to the working directory
           enable-latex: true
       - name: Run Latex
         run: |
