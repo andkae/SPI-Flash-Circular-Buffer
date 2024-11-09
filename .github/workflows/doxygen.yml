@@ -20,7 +20,7 @@ on: push
 
 jobs:
   doxygen:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     container: dolphinics/doxygen:latest
     steps:
       - name: Check out repository code
@@ -29,6 +29,11 @@ jobs:
         run: |
           mkdir -p ./doxygen/out
       - name: Run Doxygen
+        uses: mattnotmitt/doxygen-action@v1.9.5
+        with:
+          doxyfile-path: ./doxygen/Doxyfile
+          working-directory: './doxygen/out'
+          enable-latex: true
         run: |
           doxygen --version
           doxygen ./doxygen/Doxyfile
