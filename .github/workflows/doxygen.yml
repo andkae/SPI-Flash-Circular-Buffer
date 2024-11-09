@@ -36,8 +36,8 @@ jobs:
       - name: Rename
         run: |
           mv ./doxygen/out/latex/refman.pdf ./${{github.event.repository.name}}_ug-${{github.ref_name}}.pdf    # move to top
-      - name: 'Upload Artifact'
-        uses: actions/upload-artifact@v3
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
         with:
           name: sfcb-ug-${{github.ref_name}}
           path: ${{github.event.repository.name}}_ug-${{github.ref_name}}.pdf
