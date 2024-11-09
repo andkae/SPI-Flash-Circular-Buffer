@@ -8,9 +8,9 @@ The interface between _[SFCB](https://github.com/andkae/SPI-Flash-Circular-Buffe
 
 ## Features
 * Arbitrary SPI [Flash](/sfcb_flash_types.h) support, selectable via ```-D``` at compile time
-* Arbitrary number of circular buffer queues (_cbID_) in one SPI flash
+* Arbitrary number of circular buffer queues (_cbID_) in a single SPI flash
 * Interaction between circular buffer and SPI interface is realized as shared memory
-* Requires no files system like _LittleFS_, _SPIFFS_
+* File system free, not like _[LittleFS](https://github.com/littlefs-project/littlefs)_, _[SPIFFS](https://github.com/pellepl/spiffs)_
 
 
 ## Releases
@@ -59,6 +59,7 @@ $ ./test/sfcb_test
 
 ## [API](./spi_flash_cb.h)
 
+
 ### Init
 Initializes _SFCB_ common handle and assigns memory.
 
@@ -76,8 +77,8 @@ int sfcb_init (t_sfcb *self, void *cb, uint8_t cbLen, void *spi, uint16_t spiLen
 | spiLen | _spi_ buffer size in bytes        |
 
 #### Return:
-* Success: *== 0*
-* Failure: *!= 0*
+[Exit codes](#return-exit-codes)
+
 
 
 ### New queue
@@ -97,10 +98,8 @@ int sfcb_new_cb (t_sfcb *self, uint32_t magicNum, uint16_t elemSizeByte, uint16_
 | cbID         | assigned _ID_ to this queue, needed for all further requests                   |
 
 #### Return:
-| Value | Description                                                      |
-| ----- | ---------------------------------------------------------------- |
-| 0     | Success                                                          |
-| 1     | Fail: Not enough management memory, assign more memory in _init_ |
+[Exit codes](#return-exit-codes)
+
 
 
 ### Busy
@@ -116,10 +115,24 @@ int sfcb_busy (t_sfcb *self);
 | self | _SFCB_ storage element |
 
 #### Return:
-| Value | Description |
-| ----- | ----------- |
-| 0     | Free        |
-| 1     | Busy        |
+[Exit codes](#return-exit-codes)
+
+
+
+### Error
+In last request ended with error.
+```c
+int sfcb_isero (t_sfcb *self);
+```
+
+#### Arguments:
+| Arg  | Description            |
+| ---- | ---------------------- |
+| self | _SFCB_ storage element |
+
+#### Return:
+[Exit codes](#return-exit-codes)
+
 
 
 ### Build
@@ -135,11 +148,8 @@ int sfcb_mkcb (t_sfcb *self);
 | self | _SFCB_ storage element |
 
 #### Return:
-| Value | Description                         |
-| ----- | ----------------------------------- |
-| 0     | Okay                                |
-| 1     | _SFCB_ busy                         |
-| 2     | no active queues, use _sfcb_new_cb_ |
+[Exit codes](#return-exit-codes)
+
 
 
 ### Add (Append)
@@ -158,6 +168,7 @@ int sfcb_add (t_sfcb *self, uint8_t cbID, void *data, uint16_t len);
 
 #### Return:
 [Exit codes](#return-exit-codes)
+
 
 
 ### Add Done
@@ -179,10 +190,10 @@ int sfcb_add_done (t_sfcb *self, uint8_t cbID);
 [Exit codes](#return-exit-codes)
 
 
+
 ### Get Payload Offset
-Acquire the current number of written bytes to the queues element. Main
-purpose is to enable an multistage writing of an data object to the
-circular buffer.
+Acquire the current number of written bytes to queues element.
+Enables multistage data object writing to circular buffer element.
 
 ```c
 uint16_t sfcb_get_pl_wrcnt (t_sfcb *self, uint8_t cbID);
@@ -198,8 +209,10 @@ uint16_t sfcb_get_pl_wrcnt (t_sfcb *self, uint8_t cbID);
 Write byte count of queue element.
 
 
+
 ### Get Last
 Read last written queue element back.
+
 ```c
 int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t len, uint32_t *elemID);
 ```
@@ -217,6 +230,27 @@ int sfcb_get_last (t_sfcb *self, uint8_t cbID, void *data, uint16_t len, uint32_
 [Exit codes](#return-exit-codes)
 
 
+
+### Flash raw read
+Raw data read from flash.
+
+```c
+int sfcb_flash_read (t_sfcb *self, uint32_t adr, void *data, uint16_t len);
+```
+
+#### Arguments:
+| Arg     | Description                       |
+| ------- | --------------------------------- |
+| self    | _SFCB_ storage element            |
+| adr     | SPI Flash memory address          |
+| *data   | pointer to read data              |
+| len     | number of bytes in _*data_        |
+
+#### Return:
+[Exit codes](#return-exit-codes)
+
+
+
 ### Worker
 Services circular buffer layer request as well SPI packet processing.
 This function should called in a time based matter.
@@ -230,6 +264,10 @@ void sfcb_worker (t_sfcb *self);
 | Arg  | Description            |
 | ---- | ---------------------- |
 | self | _SFCB_ storage element |
+
+#### Return:
+None.
+
 
 
 ### SPI packet size
@@ -258,6 +296,25 @@ uint32_t sfcb_flash_size (void);
 
 #### Return:
 Size in bytes.
+
+
+
+### Highest queue element number
+Get highest element number of circular buffer queue _cbID_.
+
+```c
+uint32_t sfcb_idmax (t_sfcb *self, uint8_t cbID);
+```
+
+#### Arguments:
+| Arg     | Description                       |
+| ------- | --------------------------------- |
+| self    | _SFCB_ storage element            |
+| cbID    | circular buffer queue to interact |
+
+#### Return:
+Highest element number.
+
 
 
 ### Return: Exit codes
