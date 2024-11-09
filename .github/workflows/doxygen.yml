@@ -31,7 +31,7 @@ jobs:
         uses: mattnotmitt/doxygen-action@v1.9.5     # https://github.com/mattnotmitt/doxygen-action
         with:
           working-directory: '.'                # Path of the working directory to change to before running doxygen
-          doxyfile-path: './doxygen/Doxyfile'   # Path of the Doxyfile relative to the working directory
+          doxyfile-path: '/doxygen/Doxyfile'    # Path of the Doxyfile relative to the working directory
           enable-latex: true
       - name: Run Latex
         run: |
