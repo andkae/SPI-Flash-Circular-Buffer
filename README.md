@@ -10,7 +10,7 @@ The interface between _[SFCB](https://github.com/andkae/SPI-Flash-Circular-Buffe
 * Arbitrary SPI [Flash](/sfcb_flash_types.h) support, selectable via ```-D``` at compile time
 * Arbitrary number of circular buffer queues (_cbID_) in a single SPI flash
 * Interaction between circular buffer and SPI interface is realized as shared memory
-* File system free, not like _[LittleFS](https://github.com/littlefs-project/littlefs)_, _[SPIFFS](https://github.com/pellepl/spiffs)_
+* File system (_[LittleFS](https://github.com/littlefs-project/littlefs)_, _[SPIFFS](https://github.com/pellepl/spiffs)_) free 
 
 
 ## Releases
