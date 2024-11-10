@@ -16,7 +16,13 @@
 
 name: doxygen
 
-on: push
+on:
+  push:
+    tags:        
+      - '**'    # '**' 	Matches all branch and tag names.
+    pull_request:
+      branches:
+      - main
 
 jobs:
   doxygen:
